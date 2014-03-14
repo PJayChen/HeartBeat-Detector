@@ -14,7 +14,6 @@
 #include "hw_config.h"  //all hardware configuration was setted here
 #include "main.h"
 #include "shell.h"
-#include "stm32f4_discovery_l3g4200d.h"
 #include "hw_it.h"
 
 #include "string-util.c"
@@ -30,6 +29,7 @@ xSemaphoreHandle serial_tx_wait_sem;
 
 /* software Timers */
 xTimerHandle xTimerNoSignal;
+xTimerHandle xTimerADC;
 
 /* Queue structure used for passing messages. */
 typedef struct {
@@ -94,6 +94,19 @@ void vTimerSystemIdle( xTimerHandle pxTimer )
 	qprintf(xQueueUARTSend, "10 sec trun off motor\n\r");
 }
 
+void vTimerReadADCValue(xTimerHandle pxTimer)
+{
+	double AD_value;
+	int value[3];
+
+	value[0] = ADCConvertedValue[0];
+	qprintf(xQueueUARTSend, "ADC Read:%d\n", value[0]);
+
+	AD_value = (value[0] * 2.96f) / 4096.0f;
+	value[1] = (int) AD_value;
+	value[2] = (AD_value - value[1]) * 1000;
+	qprintf(xQueueUARTSend, "voltage:%d.%d\n", value[1], value[2]);
+}
 /**
   * @brief  Main program.
   * @param  None
@@ -107,6 +120,8 @@ int main(void)
 	/*A Timer used to count how long there is no signal come in*/
 	xTimerNoSignal = xTimerCreate("TurnOffTime", 10000 / portTICK_RATE_MS, pdFALSE,  (void *) timerID, vTimerSystemIdle);
 
+	xTimerADC = xTimerCreate("ReadADC", 1000 / portTICK_RATE_MS, pdTRUE, (void *) timerID1, vTimerReadADCValue);
+
 	/*a queue for tansfer the senddate to USART task*/
 	xQueueUARTSend = xQueueCreate(15, sizeof(serial_str_msg));
    	xQueueUARTRecvie = xQueueCreate(15, sizeof(serial_ch_msg));
@@ -117,6 +132,7 @@ int main(void)
 	prvSetupHardware();
 
 	xTimerStart(xTimerNoSignal, 0);
+	xTimerStart(xTimerADC, 0);
 
 	xTaskCreate(vUsartSendTask, ( signed portCHAR * ) "USART", configMINIMAL_STACK_SIZE, NULL,tskIDLE_PRIORITY, NULL);
 	xTaskCreate(shell, ( signed portCHAR * ) "shell", configMINIMAL_STACK_SIZE, NULL,tskIDLE_PRIORITY + 5, NULL);

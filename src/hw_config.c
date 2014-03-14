@@ -46,7 +46,11 @@ void prvSetupHardware( void )
   	GPIO_Configuration();
   //	TIM_Configuration();
   	USART_Configuration();
-	
+    
+    DMA_Configuration();
+    ADC_Configuration();
+	 
+    ADC_SoftwareStartConv(ADC1); // Start conversion by software.
 }
 
 
@@ -58,8 +62,16 @@ void prvSetupHardware( void )
 void RCC_Configuration(void)
 {
   
-  RCC_AHB1PeriphClockCmd(  RCC_AHB1Periph_GPIOD , ENABLE );
-  RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM4, ENABLE );
+ // RCC_AHB1PeriphClockCmd(  RCC_AHB1Periph_GPIOD , ENABLE );
+  //RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM4, ENABLE );
+  
+  //--Enable DMA1 clock--
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+  
+  //Enable ADC1 clock
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); 
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1ENR_GPIOCEN, ENABLE);
 
   //Enable GPIO Clocks For USART2
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
@@ -69,33 +81,19 @@ void RCC_Configuration(void)
 }
 
 /**
-  * @brief  configure the PD12~15 to Timers
+  * @brief  
   * @param  None
   * @retval None
   */
 void GPIO_Configuration(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
-  /*
-  //GPIO Configuration for TIM4
-     GPIO_StructInit(&GPIO_InitStructure); // Reset init structure
- 
-     GPIO_PinAFConfig(GPIOD, GPIO_PinSource12, GPIO_AF_TIM4);
-     GPIO_PinAFConfig(GPIOD, GPIO_PinSource13, GPIO_AF_TIM4);
-     GPIO_PinAFConfig(GPIOD, GPIO_PinSource14, GPIO_AF_TIM4);
-     GPIO_PinAFConfig(GPIOD, GPIO_PinSource15, GPIO_AF_TIM4);
-      
-
-  //   // Setup Blue & Green LED on STM32-Discovery Board to use PWM.
-     GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_12 | GPIO_Pin_13| GPIO_Pin_14| GPIO_Pin_15; 
-  // //PD12->LED3 PD13->LED4 PD14->LED5 PD15->LED6
-     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;            // Alt Function - Push Pull
-  	 GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF; 
-     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-     GPIO_Init( GPIOD, &GPIO_InitStructure );  
-*/
+  
+  //ADC
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // PC0
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN; //analog mode
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
     /*----------------------------------------------------------------------*/
 
   //GPIO Configuration for USART - PA2, PA3
@@ -110,6 +108,65 @@ void GPIO_Configuration(void)
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
 
+}
+
+
+
+void DMA_Configuration(void){
+  DMA_InitTypeDef DMA_InitStructure;
+
+  DMA_DeInit(DMA2_Stream4);
+  DMA_StructInit(&DMA_InitStructure);
+  DMA_InitStructure.DMA_Channel = DMA_Channel_0;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) ADC1_DR_Address;
+  DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) &ADCConvertedValue[0];
+
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+
+  DMA_InitStructure.DMA_BufferSize = 1;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+
+  DMA_Init(DMA2_Stream4, &DMA_InitStructure);
+  DMA_Cmd(DMA2_Stream4, ENABLE);
+}
+
+void ADC_Configuration(void){
+  ADC_InitTypeDef ADC_InitStructure;
+
+  
+
+  //ADC Sturcture configuration
+  ADC_DeInit(); // Reset all parameters to their default values
+  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+  ADC_InitStructure.ADC_ScanConvMode = ENABLE; // No scan?
+  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE; //continuous conversion
+  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None; // no external trigger for conversion
+  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; // converted data will be shifted to the right
+  ADC_InitStructure.ADC_NbrOfConversion = 1; // Number of used ADC channels
+  ADC_Init(ADC1, &ADC_InitStructure);  
+
+  // use channel 10 from ADC1, with sample time 15 cycles
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 1, ADC_SampleTime_15Cycles);
+  
+  ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
+  
+  //Enable ADC1 use DMA
+  ADC_DMACmd(ADC1, ENABLE);
+  //Enable ADC1
+  ADC_Cmd(ADC1, ENABLE);
+/*
+  //Calibrate ADC1
+  ADC_ResetCalibration(ADC1);
+  while(ADC_GetResetCalibrationStatus(ADC1));
+  ADC_StartCalibration(ADC1);
+  while(ADC_GetCalibrationStatus(ADC1));
+*/
 }
 
 /**
