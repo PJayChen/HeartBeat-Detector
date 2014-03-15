@@ -1,0 +1,357 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"hw_it.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text.USART2_IRQHandler,"ax",%progbits
+  20              		.align	2
+  21              		.global	USART2_IRQHandler
+  22              		.thumb
+  23              		.thumb_func
+  25              	USART2_IRQHandler:
+  26              	.LFB110:
+  27              		.file 1 "src/hw_it.c"
+   1:src/hw_it.c   **** #include "stm32f4xx.h"
+   2:src/hw_it.c   **** 
+   3:src/hw_it.c   **** /* FreeRTOS includes */
+   4:src/hw_it.c   **** #include "FreeRTOS.h"
+   5:src/hw_it.c   **** #include "task.h"
+   6:src/hw_it.c   **** #include "semphr.h"
+   7:src/hw_it.c   **** #include "timers.h"
+   8:src/hw_it.c   **** #include "queue.h"
+   9:src/hw_it.c   **** 
+  10:src/hw_it.c   **** 
+  11:src/hw_it.c   **** extern xSemaphoreHandle serial_tx_wait_sem;
+  12:src/hw_it.c   **** extern xQueueHandle xQueueUARTRecvie;
+  13:src/hw_it.c   **** extern xTimerHandle xTimerNoSignal;
+  14:src/hw_it.c   **** 
+  15:src/hw_it.c   **** /* Queue structure used for passing characters. */
+  16:src/hw_it.c   **** typedef struct {
+  17:src/hw_it.c   ****         char ch;
+  18:src/hw_it.c   **** } serial_ch_msg;
+  19:src/hw_it.c   **** 
+  20:src/hw_it.c   **** /* IRQ handler to handle USART2 interruptss (both transmit and receive
+  21:src/hw_it.c   **** * interrupts). */
+  22:src/hw_it.c   **** void USART2_IRQHandler()
+  23:src/hw_it.c   **** {
+  28              		.loc 1 23 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 1, uses_anonymous_args = 0
+  32 0000 90B5     		push	{r4, r7, lr}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 12
+  35              		.cfi_offset 14, -4
+  36              		.cfi_offset 7, -8
+  37              		.cfi_offset 4, -12
+  38 0002 85B0     		sub	sp, sp, #20
+  39              	.LCFI1:
+  40              		.cfi_def_cfa_offset 32
+  41 0004 02AF     		add	r7, sp, #8
+  42              	.LCFI2:
+  43              		.cfi_def_cfa 7, 24
+  24:src/hw_it.c   ****         static signed portBASE_TYPE xHigherPriorityTaskWoken;
+  25:src/hw_it.c   ****         serial_ch_msg rx_msg;
+  26:src/hw_it.c   **** 
+  27:src/hw_it.c   ****         /* If this interrupt is for a transmit... */
+  28:src/hw_it.c   ****         if (USART_GetITStatus(USART2, USART_IT_TXE) != RESET) {
+  44              		.loc 1 28 0
+  45 0006 4FF48840 		mov	r0, #17408
+  46 000a C4F20000 		movt	r0, 16384
+  47 000e 40F22771 		movw	r1, #1831
+  48 0012 FFF7FEFF 		bl	USART_GetITStatus
+  49 0016 0346     		mov	r3, r0
+  50 0018 002B     		cmp	r3, #0
+  51 001a 1AD0     		beq	.L2
+  29:src/hw_it.c   ****                 /* "give" the serial_tx_wait_sem semaphore to notfiy processes
+  30:src/hw_it.c   ****                  * that the buffer has a spot free for the next byte.
+  31:src/hw_it.c   ****                  */
+  32:src/hw_it.c   ****                 xSemaphoreGiveFromISR(serial_tx_wait_sem, &xHigherPriorityTaskWoken);
+  52              		.loc 1 32 0
+  53 001c 40F20003 		movw	r3, #:lower16:serial_tx_wait_sem
+  54 0020 C0F20003 		movt	r3, #:upper16:serial_tx_wait_sem
+  55 0024 1B68     		ldr	r3, [r3, #0]
+  56 0026 1846     		mov	r0, r3
+  57 0028 4FF00001 		mov	r1, #0
+  58 002c 40F20002 		movw	r2, #:lower16:xHigherPriorityTaskWoken.7449
+  59 0030 C0F20002 		movt	r2, #:upper16:xHigherPriorityTaskWoken.7449
+  60 0034 4FF00003 		mov	r3, #0
+  61 0038 FFF7FEFF 		bl	xQueueGenericSendFromISR
+  33:src/hw_it.c   **** 
+  34:src/hw_it.c   ****                 /* Diables the transmit interrupt. */
+  35:src/hw_it.c   ****                 USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
+  62              		.loc 1 35 0
+  63 003c 4FF48840 		mov	r0, #17408
+  64 0040 C4F20000 		movt	r0, 16384
+  65 0044 40F22771 		movw	r1, #1831
+  66 0048 4FF00002 		mov	r2, #0
+  67 004c FFF7FEFF 		bl	USART_ITConfig
+  68 0050 3CE0     		b	.L3
+  69              	.L2:
+  36:src/hw_it.c   ****                 /* If this interrupt is for a receive... */
+  37:src/hw_it.c   ****         }
+  38:src/hw_it.c   ****         else if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
+  70              		.loc 1 38 0
+  71 0052 4FF48840 		mov	r0, #17408
+  72 0056 C4F20000 		movt	r0, 16384
+  73 005a 40F22551 		movw	r1, #1317
+  74 005e FFF7FEFF 		bl	USART_GetITStatus
+  75 0062 0346     		mov	r3, r0
+  76 0064 002B     		cmp	r3, #0
+  77 0066 30D0     		beq	.L4
+  39:src/hw_it.c   ****                 /* Receive the byte from the buffer. */
+  40:src/hw_it.c   ****                 rx_msg.ch = USART_ReceiveData(USART2);
+  78              		.loc 1 40 0
+  79 0068 4FF48840 		mov	r0, #17408
+  80 006c C4F20000 		movt	r0, 16384
+  81 0070 FFF7FEFF 		bl	USART_ReceiveData
+  82 0074 0346     		mov	r3, r0
+  83 0076 DBB2     		uxtb	r3, r3
+  84 0078 3B71     		strb	r3, [r7, #4]
+  41:src/hw_it.c   **** 
+  42:src/hw_it.c   ****                 xTimerReset(xTimerNoSignal, 10);
+  85              		.loc 1 42 0
+  86 007a 40F20003 		movw	r3, #:lower16:xTimerNoSignal
+  87 007e C0F20003 		movt	r3, #:upper16:xTimerNoSignal
+  88 0082 1C68     		ldr	r4, [r3, #0]
+  89 0084 FFF7FEFF 		bl	xTaskGetTickCount
+  90 0088 0346     		mov	r3, r0
+  91 008a 4FF00A02 		mov	r2, #10
+  92 008e 0092     		str	r2, [sp, #0]
+  93 0090 2046     		mov	r0, r4
+  94 0092 4FF00001 		mov	r1, #0
+  95 0096 1A46     		mov	r2, r3
+  96 0098 4FF00003 		mov	r3, #0
+  97 009c FFF7FEFF 		bl	xTimerGenericCommand
+  43:src/hw_it.c   ****                 /* Queue the received byte. */
+  44:src/hw_it.c   ****                 if(!xQueueSendToBackFromISR(xQueueUARTRecvie, &rx_msg, &xHigherPriorityTaskWoken)) 
+  98              		.loc 1 44 0
+  99 00a0 40F20003 		movw	r3, #:lower16:xQueueUARTRecvie
+ 100 00a4 C0F20003 		movt	r3, #:upper16:xQueueUARTRecvie
+ 101 00a8 1B68     		ldr	r3, [r3, #0]
+ 102 00aa 1846     		mov	r0, r3
+ 103 00ac 07F10403 		add	r3, r7, #4
+ 104 00b0 1946     		mov	r1, r3
+ 105 00b2 40F20002 		movw	r2, #:lower16:xHigherPriorityTaskWoken.7449
+ 106 00b6 C0F20002 		movt	r2, #:upper16:xHigherPriorityTaskWoken.7449
+ 107 00ba 4FF00003 		mov	r3, #0
+ 108 00be FFF7FEFF 		bl	xQueueGenericSendFromISR
+ 109 00c2 0346     		mov	r3, r0
+ 110 00c4 002B     		cmp	r3, #0
+ 111 00c6 01D1     		bne	.L3
+ 112              	.L5:
+  45:src/hw_it.c   ****                         /* If there was an error queueing the received byte,
+  46:src/hw_it.c   ****                          * freeze. */
+  47:src/hw_it.c   ****                         while(1);
+ 113              		.loc 1 47 0 discriminator 1
+ 114 00c8 FEE7     		b	.L5
+ 115              	.L4:
+  48:src/hw_it.c   ****                 }
+  49:src/hw_it.c   ****         }
+  50:src/hw_it.c   ****         else {
+  51:src/hw_it.c   ****                 /* Only transmit and receive interrupts should be enabled.
+  52:src/hw_it.c   ****                  * If this is another type of interrupt, freeze.
+  53:src/hw_it.c   ****                  */
+  54:src/hw_it.c   ****                 while(1);
+ 116              		.loc 1 54 0 discriminator 1
+ 117 00ca FEE7     		b	.L4
+ 118              	.L3:
+  55:src/hw_it.c   ****         }
+  56:src/hw_it.c   **** 
+  57:src/hw_it.c   ****         if (xHigherPriorityTaskWoken) {
+ 119              		.loc 1 57 0
+ 120 00cc 40F20003 		movw	r3, #:lower16:xHigherPriorityTaskWoken.7449
+ 121 00d0 C0F20003 		movt	r3, #:upper16:xHigherPriorityTaskWoken.7449
+ 122 00d4 1B68     		ldr	r3, [r3, #0]
+ 123 00d6 002B     		cmp	r3, #0
+ 124 00d8 01D0     		beq	.L1
+  58:src/hw_it.c   ****                 taskYIELD();
+ 125              		.loc 1 58 0
+ 126 00da FFF7FEFF 		bl	vPortYieldFromISR
+ 127              	.L1:
+  59:src/hw_it.c   ****         }
+  60:src/hw_it.c   **** }
+ 128              		.loc 1 60 0
+ 129 00de 07F10C07 		add	r7, r7, #12
+ 130 00e2 BD46     		mov	sp, r7
+ 131 00e4 90BD     		pop	{r4, r7, pc}
+ 132              		.cfi_endproc
+ 133              	.LFE110:
+ 135 00e6 00BF     		.section	.text.send_byte,"ax",%progbits
+ 136              		.align	2
+ 137              		.global	send_byte
+ 138              		.thumb
+ 139              		.thumb_func
+ 141              	send_byte:
+ 142              	.LFB111:
+  61:src/hw_it.c   **** 
+  62:src/hw_it.c   **** void send_byte(char ch)
+  63:src/hw_it.c   **** {
+ 143              		.loc 1 63 0
+ 144              		.cfi_startproc
+ 145              		@ args = 0, pretend = 0, frame = 8
+ 146              		@ frame_needed = 1, uses_anonymous_args = 0
+ 147 0000 80B5     		push	{r7, lr}
+ 148              	.LCFI3:
+ 149              		.cfi_def_cfa_offset 8
+ 150              		.cfi_offset 14, -4
+ 151              		.cfi_offset 7, -8
+ 152 0002 82B0     		sub	sp, sp, #8
+ 153              	.LCFI4:
+ 154              		.cfi_def_cfa_offset 16
+ 155 0004 00AF     		add	r7, sp, #0
+ 156              	.LCFI5:
+ 157              		.cfi_def_cfa_register 7
+ 158 0006 0346     		mov	r3, r0
+ 159 0008 FB71     		strb	r3, [r7, #7]
+  64:src/hw_it.c   ****         /* Wait until the RS232 port can receive another byte (this semaphore
+  65:src/hw_it.c   ****          * is "given" by the RS232 port interrupt when the buffer has room for
+  66:src/hw_it.c   ****          * another byte.
+  67:src/hw_it.c   ****          */
+  68:src/hw_it.c   ****         while (!xSemaphoreTake(serial_tx_wait_sem, portMAX_DELAY));
+ 160              		.loc 1 68 0
+ 161 000a 00BF     		nop
+ 162              	.L8:
+ 163              		.loc 1 68 0 is_stmt 0 discriminator 1
+ 164 000c 40F20003 		movw	r3, #:lower16:serial_tx_wait_sem
+ 165 0010 C0F20003 		movt	r3, #:upper16:serial_tx_wait_sem
+ 166 0014 1B68     		ldr	r3, [r3, #0]
+ 167 0016 1846     		mov	r0, r3
+ 168 0018 4FF00001 		mov	r1, #0
+ 169 001c 4FF0FF32 		mov	r2, #-1
+ 170 0020 4FF00003 		mov	r3, #0
+ 171 0024 FFF7FEFF 		bl	xQueueGenericReceive
+ 172 0028 0346     		mov	r3, r0
+ 173 002a 002B     		cmp	r3, #0
+ 174 002c EED0     		beq	.L8
+  69:src/hw_it.c   **** 
+  70:src/hw_it.c   ****         /* Send the byte and enable the transmit interrupt (it is disabled by
+  71:src/hw_it.c   ****          * the interrupt).
+  72:src/hw_it.c   ****          */
+  73:src/hw_it.c   ****         USART_SendData(USART2, ch);
+ 175              		.loc 1 73 0 is_stmt 1
+ 176 002e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 177 0030 9BB2     		uxth	r3, r3
+ 178 0032 4FF48840 		mov	r0, #17408
+ 179 0036 C4F20000 		movt	r0, 16384
+ 180 003a 1946     		mov	r1, r3
+ 181 003c FFF7FEFF 		bl	USART_SendData
+  74:src/hw_it.c   ****         USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
+ 182              		.loc 1 74 0
+ 183 0040 4FF48840 		mov	r0, #17408
+ 184 0044 C4F20000 		movt	r0, 16384
+ 185 0048 40F22771 		movw	r1, #1831
+ 186 004c 4FF00102 		mov	r2, #1
+ 187 0050 FFF7FEFF 		bl	USART_ITConfig
+  75:src/hw_it.c   **** }
+ 188              		.loc 1 75 0
+ 189 0054 07F10807 		add	r7, r7, #8
+ 190 0058 BD46     		mov	sp, r7
+ 191 005a 80BD     		pop	{r7, pc}
+ 192              		.cfi_endproc
+ 193              	.LFE111:
+ 195              		.section	.text.send_str,"ax",%progbits
+ 196              		.align	2
+ 197              		.global	send_str
+ 198              		.thumb
+ 199              		.thumb_func
+ 201              	send_str:
+ 202              	.LFB112:
+  76:src/hw_it.c   **** 
+  77:src/hw_it.c   **** void send_str(char *str){
+ 203              		.loc 1 77 0
+ 204              		.cfi_startproc
+ 205              		@ args = 0, pretend = 0, frame = 8
+ 206              		@ frame_needed = 1, uses_anonymous_args = 0
+ 207 0000 80B5     		push	{r7, lr}
+ 208              	.LCFI6:
+ 209              		.cfi_def_cfa_offset 8
+ 210              		.cfi_offset 14, -4
+ 211              		.cfi_offset 7, -8
+ 212 0002 82B0     		sub	sp, sp, #8
+ 213              	.LCFI7:
+ 214              		.cfi_def_cfa_offset 16
+ 215 0004 00AF     		add	r7, sp, #0
+ 216              	.LCFI8:
+ 217              		.cfi_def_cfa_register 7
+ 218 0006 7860     		str	r0, [r7, #4]
+  78:src/hw_it.c   **** 
+  79:src/hw_it.c   ****     while( *str != '\0')
+ 219              		.loc 1 79 0
+ 220 0008 08E0     		b	.L10
+ 221              	.L11:
+  80:src/hw_it.c   ****         send_byte(*str++);
+ 222              		.loc 1 80 0
+ 223 000a 7B68     		ldr	r3, [r7, #4]
+ 224 000c 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 225 000e 7A68     		ldr	r2, [r7, #4]
+ 226 0010 02F10102 		add	r2, r2, #1
+ 227 0014 7A60     		str	r2, [r7, #4]
+ 228 0016 1846     		mov	r0, r3
+ 229 0018 FFF7FEFF 		bl	send_byte
+ 230              	.L10:
+  79:src/hw_it.c   ****     while( *str != '\0')
+ 231              		.loc 1 79 0 discriminator 1
+ 232 001c 7B68     		ldr	r3, [r7, #4]
+ 233 001e 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 234 0020 002B     		cmp	r3, #0
+ 235 0022 F2D1     		bne	.L11
+  81:src/hw_it.c   **** 
+  82:src/hw_it.c   **** }
+ 236              		.loc 1 82 0
+ 237 0024 07F10807 		add	r7, r7, #8
+ 238 0028 BD46     		mov	sp, r7
+ 239 002a 80BD     		pop	{r7, pc}
+ 240              		.cfi_endproc
+ 241              	.LFE112:
+ 243              		.section	.bss.xHigherPriorityTaskWoken.7449,"aw",%nobits
+ 244              		.align	2
+ 247              	xHigherPriorityTaskWoken.7449:
+ 248 0000 00000000 		.space	4
+ 249              		.text
+ 250              	.Letext0:
+ 251              		.file 2 "/usr/local/csl/arm-2012.03/bin/../lib/gcc/arm-none-eabi/4.6.3/../../../../arm-none-eabi/i
+ 252              		.file 3 "libs/Device/STM32F4xx/Include/stm32f4xx.h"
+ 253              		.file 4 "FreeRTOS/Source/include/../../Source/portable/GCC/ARM_CM4F/portmacro.h"
+ 254              		.file 5 "FreeRTOS/Source/include/queue.h"
+ 255              		.file 6 "FreeRTOS/Source/include/semphr.h"
+ 256              		.file 7 "FreeRTOS/Source/include/timers.h"
+ 257              		.file 8 "libs/CMSIS/Include/core_cm4.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 hw_it.c
+     /tmp/ccpGEb4v.s:20     .text.USART2_IRQHandler:00000000 $t
+     /tmp/ccpGEb4v.s:25     .text.USART2_IRQHandler:00000000 USART2_IRQHandler
+     /tmp/ccpGEb4v.s:247    .bss.xHigherPriorityTaskWoken.7449:00000000 xHigherPriorityTaskWoken.7449
+     /tmp/ccpGEb4v.s:136    .text.send_byte:00000000 $t
+     /tmp/ccpGEb4v.s:141    .text.send_byte:00000000 send_byte
+     /tmp/ccpGEb4v.s:196    .text.send_str:00000000 $t
+     /tmp/ccpGEb4v.s:201    .text.send_str:00000000 send_str
+     /tmp/ccpGEb4v.s:244    .bss.xHigherPriorityTaskWoken.7449:00000000 $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+USART_GetITStatus
+serial_tx_wait_sem
+xQueueGenericSendFromISR
+USART_ITConfig
+USART_ReceiveData
+xTimerNoSignal
+xTaskGetTickCount
+xTimerGenericCommand
+xQueueUARTRecvie
+vPortYieldFromISR
+xQueueGenericReceive
+USART_SendData

@@ -1,0 +1,844 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"hw_config.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.comm	ADCConvertedValue,2,4
+  20              		.section	.text.prvSetupHardware,"ax",%progbits
+  21              		.align	2
+  22              		.global	prvSetupHardware
+  23              		.thumb
+  24              		.thumb_func
+  26              	prvSetupHardware:
+  27              	.LFB110:
+  28              		.file 1 "src/hw_config.c"
+   1:src/hw_config.c **** /**
+   2:src/hw_config.c ****   ******************************************************************************
+   3:src/hw_config.c ****   * @file    STM32F4-Discovery FreeRTOS demo\hw_config.c
+   4:src/hw_config.c ****   * @author  T.O.M.A.S. Team
+   5:src/hw_config.c ****   * @version V1.0.0
+   6:src/hw_config.c ****   * @date    05-October-2011
+   7:src/hw_config.c ****   * @brief   Hardware initialization
+   8:src/hw_config.c ****   ******************************************************************************
+   9:src/hw_config.c ****   * @attention
+  10:src/hw_config.c ****   *
+  11:src/hw_config.c ****   * THE PRESENT FIRMWARE WHICH IS FOR GUIDANCE ONLY AIMS AT PROVIDING CUSTOMERS
+  12:src/hw_config.c ****   * WITH CODING INFORMATION REGARDING THEIR PRODUCTS IN ORDER FOR THEM TO SAVE
+  13:src/hw_config.c ****   * TIME. AS A RESULT, STMICROELECTRONICS SHALL NOT BE HELD LIABLE FOR ANY
+  14:src/hw_config.c ****   * DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES WITH RESPECT TO ANY CLAIMS ARISING
+  15:src/hw_config.c ****   * FROM THE CONTENT OF SUCH FIRMWARE AND/OR THE USE MADE BY CUSTOMERS OF THE
+  16:src/hw_config.c ****   * CODING INFORMATION CONTAINED HEREIN IN CONNECTION WITH THEIR PRODUCTS.
+  17:src/hw_config.c ****   *
+  18:src/hw_config.c ****   * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
+  19:src/hw_config.c ****   ******************************************************************************
+  20:src/hw_config.c ****   */
+  21:src/hw_config.c **** 
+  22:src/hw_config.c **** /* Library includes. */
+  23:src/hw_config.c **** #include "hw_config.h"
+  24:src/hw_config.c **** #include "FreeRTOSConfig.h"
+  25:src/hw_config.c **** 
+  26:src/hw_config.c **** 
+  27:src/hw_config.c **** /*-----------------------------------------------------------*/
+  28:src/hw_config.c **** void prvSetupHardware( void )
+  29:src/hw_config.c **** {
+  29              		.loc 1 29 0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 1, uses_anonymous_args = 0
+  33 0000 80B5     		push	{r7, lr}
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 8
+  36              		.cfi_offset 14, -4
+  37              		.cfi_offset 7, -8
+  38 0002 00AF     		add	r7, sp, #0
+  39              	.LCFI1:
+  40              		.cfi_def_cfa_register 7
+  30:src/hw_config.c **** 	/* Set the Vector Table base address at 0x08000000 */
+  31:src/hw_config.c **** 	NVIC_SetVectorTable( NVIC_VectTab_FLASH, 0x0 );
+  41              		.loc 1 31 0
+  42 0004 4FF00060 		mov	r0, #134217728
+  43 0008 4FF00001 		mov	r1, #0
+  44 000c FFF7FEFF 		bl	NVIC_SetVectorTable
+  32:src/hw_config.c **** 	NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4 );
+  45              		.loc 1 32 0
+  46 0010 4FF44070 		mov	r0, #768
+  47 0014 FFF7FEFF 		bl	NVIC_PriorityGroupConfig
+  33:src/hw_config.c **** 
+  34:src/hw_config.c **** 	/* Configure LED IOs as output push-pull */
+  35:src/hw_config.c ****     /* Initialize LEDs on STM32F4_Discovery board */
+  36:src/hw_config.c **** 	//prvLED_Config(GPIO);
+  37:src/hw_config.c **** 	/* Configure User button pin (PA0) as external interrupt -> modes switching */
+  38:src/hw_config.c **** 	//STM_EVAL_PBInit(BUTTON_USER,BUTTON_MODE_EXTI);
+  39:src/hw_config.c **** 
+  40:src/hw_config.c **** 	/* Configuration of Timer4 to control LEDs based on MEMS data */
+  41:src/hw_config.c **** 	//prvTIM4_Config();
+  42:src/hw_config.c **** 
+  43:src/hw_config.c **** 	/* Configure LIS302 in order to produce data used for TIM4 reconfiguration and LED control */
+  44:src/hw_config.c **** 
+  45:src/hw_config.c ****   	RCC_Configuration();
+  48              		.loc 1 45 0
+  49 0018 FFF7FEFF 		bl	RCC_Configuration
+  46:src/hw_config.c ****   	GPIO_Configuration();
+  50              		.loc 1 46 0
+  51 001c FFF7FEFF 		bl	GPIO_Configuration
+  47:src/hw_config.c ****   //	TIM_Configuration();
+  48:src/hw_config.c ****   	USART_Configuration();
+  52              		.loc 1 48 0
+  53 0020 FFF7FEFF 		bl	USART_Configuration
+  49:src/hw_config.c ****     
+  50:src/hw_config.c ****     DMA_Configuration();
+  54              		.loc 1 50 0
+  55 0024 FFF7FEFF 		bl	DMA_Configuration
+  51:src/hw_config.c ****     ADC_Configuration();
+  56              		.loc 1 51 0
+  57 0028 FFF7FEFF 		bl	ADC_Configuration
+  52:src/hw_config.c **** 	 
+  53:src/hw_config.c ****     ADC_SoftwareStartConv(ADC1); // Start conversion by software.
+  58              		.loc 1 53 0
+  59 002c 4FF40050 		mov	r0, #8192
+  60 0030 C4F20100 		movt	r0, 16385
+  61 0034 FFF7FEFF 		bl	ADC_SoftwareStartConv
+  54:src/hw_config.c **** }
+  62              		.loc 1 54 0
+  63 0038 80BD     		pop	{r7, pc}
+  64              		.cfi_endproc
+  65              	.LFE110:
+  67              		.section	.text.RCC_Configuration,"ax",%progbits
+  68              		.align	2
+  69              		.global	RCC_Configuration
+  70              		.thumb
+  71              		.thumb_func
+  73              	RCC_Configuration:
+  74              	.LFB111:
+  55:src/hw_config.c **** 
+  56:src/hw_config.c **** 
+  57:src/hw_config.c **** /**
+  58:src/hw_config.c ****   * @brief  Configures the different system clocks.
+  59:src/hw_config.c ****   * @param  None
+  60:src/hw_config.c ****   * @retval None
+  61:src/hw_config.c ****   */
+  62:src/hw_config.c **** void RCC_Configuration(void)
+  63:src/hw_config.c **** {
+  75              		.loc 1 63 0
+  76              		.cfi_startproc
+  77              		@ args = 0, pretend = 0, frame = 0
+  78              		@ frame_needed = 1, uses_anonymous_args = 0
+  79 0000 80B5     		push	{r7, lr}
+  80              	.LCFI2:
+  81              		.cfi_def_cfa_offset 8
+  82              		.cfi_offset 14, -4
+  83              		.cfi_offset 7, -8
+  84 0002 00AF     		add	r7, sp, #0
+  85              	.LCFI3:
+  86              		.cfi_def_cfa_register 7
+  64:src/hw_config.c ****   
+  65:src/hw_config.c ****  // RCC_AHB1PeriphClockCmd(  RCC_AHB1Periph_GPIOD , ENABLE );
+  66:src/hw_config.c ****   //RCC_APB1PeriphClockCmd( RCC_APB1Periph_TIM4, ENABLE );
+  67:src/hw_config.c ****   
+  68:src/hw_config.c ****   //--Enable DMA1 clock--
+  69:src/hw_config.c ****   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+  87              		.loc 1 69 0
+  88 0004 4FF48000 		mov	r0, #4194304
+  89 0008 4FF00101 		mov	r1, #1
+  90 000c FFF7FEFF 		bl	RCC_AHB1PeriphClockCmd
+  70:src/hw_config.c ****   
+  71:src/hw_config.c ****   //Enable ADC1 clock
+  72:src/hw_config.c ****   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); 
+  91              		.loc 1 72 0
+  92 0010 4FF48070 		mov	r0, #256
+  93 0014 4FF00101 		mov	r1, #1
+  94 0018 FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  73:src/hw_config.c ****   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+  95              		.loc 1 73 0
+  96 001c 4FF00400 		mov	r0, #4
+  97 0020 4FF00101 		mov	r1, #1
+  98 0024 FFF7FEFF 		bl	RCC_AHB1PeriphClockCmd
+  74:src/hw_config.c ****   RCC_AHB1PeriphClockCmd(RCC_AHB1ENR_GPIOCEN, ENABLE);
+  99              		.loc 1 74 0
+ 100 0028 4FF00400 		mov	r0, #4
+ 101 002c 4FF00101 		mov	r1, #1
+ 102 0030 FFF7FEFF 		bl	RCC_AHB1PeriphClockCmd
+  75:src/hw_config.c **** 
+  76:src/hw_config.c ****   //Enable GPIO Clocks For USART2
+  77:src/hw_config.c ****   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+ 103              		.loc 1 77 0
+ 104 0034 4FF00100 		mov	r0, #1
+ 105 0038 4FF00101 		mov	r1, #1
+ 106 003c FFF7FEFF 		bl	RCC_AHB1PeriphClockCmd
+  78:src/hw_config.c **** 
+  79:src/hw_config.c ****   //Enable Clocks for USART2
+  80:src/hw_config.c ****   RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);    
+ 107              		.loc 1 80 0
+ 108 0040 4FF40030 		mov	r0, #131072
+ 109 0044 4FF00101 		mov	r1, #1
+ 110 0048 FFF7FEFF 		bl	RCC_APB1PeriphClockCmd
+  81:src/hw_config.c **** }
+ 111              		.loc 1 81 0
+ 112 004c 80BD     		pop	{r7, pc}
+ 113              		.cfi_endproc
+ 114              	.LFE111:
+ 116 004e 00BF     		.section	.text.GPIO_Configuration,"ax",%progbits
+ 117              		.align	2
+ 118              		.global	GPIO_Configuration
+ 119              		.thumb
+ 120              		.thumb_func
+ 122              	GPIO_Configuration:
+ 123              	.LFB112:
+  82:src/hw_config.c **** 
+  83:src/hw_config.c **** /**
+  84:src/hw_config.c ****   * @brief  
+  85:src/hw_config.c ****   * @param  None
+  86:src/hw_config.c ****   * @retval None
+  87:src/hw_config.c ****   */
+  88:src/hw_config.c **** void GPIO_Configuration(void)
+  89:src/hw_config.c **** {
+ 124              		.loc 1 89 0
+ 125              		.cfi_startproc
+ 126              		@ args = 0, pretend = 0, frame = 8
+ 127              		@ frame_needed = 1, uses_anonymous_args = 0
+ 128 0000 80B5     		push	{r7, lr}
+ 129              	.LCFI4:
+ 130              		.cfi_def_cfa_offset 8
+ 131              		.cfi_offset 14, -4
+ 132              		.cfi_offset 7, -8
+ 133 0002 82B0     		sub	sp, sp, #8
+ 134              	.LCFI5:
+ 135              		.cfi_def_cfa_offset 16
+ 136 0004 00AF     		add	r7, sp, #0
+ 137              	.LCFI6:
+ 138              		.cfi_def_cfa_register 7
+  90:src/hw_config.c ****   GPIO_InitTypeDef GPIO_InitStructure;
+  91:src/hw_config.c **** 
+  92:src/hw_config.c ****   GPIO_StructInit(&GPIO_InitStructure);
+ 139              		.loc 1 92 0
+ 140 0006 3B46     		mov	r3, r7
+ 141 0008 1846     		mov	r0, r3
+ 142 000a FFF7FEFF 		bl	GPIO_StructInit
+  93:src/hw_config.c ****   //ADC
+  94:src/hw_config.c ****   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // PC0
+ 143              		.loc 1 94 0
+ 144 000e 4FF00103 		mov	r3, #1
+ 145 0012 3B60     		str	r3, [r7, #0]
+  95:src/hw_config.c ****   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN; //analog mode
+ 146              		.loc 1 95 0
+ 147 0014 4FF00303 		mov	r3, #3
+ 148 0018 3B71     		strb	r3, [r7, #4]
+  96:src/hw_config.c ****   //GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  97:src/hw_config.c ****   GPIO_Init(GPIOC, &GPIO_InitStructure);
+ 149              		.loc 1 97 0
+ 150 001a 4FF40060 		mov	r0, #2048
+ 151 001e C4F20200 		movt	r0, 16386
+ 152 0022 3B46     		mov	r3, r7
+ 153 0024 1946     		mov	r1, r3
+ 154 0026 FFF7FEFF 		bl	GPIO_Init
+  98:src/hw_config.c ****     /*----------------------------------------------------------------------*/
+  99:src/hw_config.c ****   
+ 100:src/hw_config.c ****   GPIO_StructInit(&GPIO_InitStructure);
+ 155              		.loc 1 100 0
+ 156 002a 3B46     		mov	r3, r7
+ 157 002c 1846     		mov	r0, r3
+ 158 002e FFF7FEFF 		bl	GPIO_StructInit
+ 101:src/hw_config.c ****   //GPIO Configuration for USART - PA2, PA3
+ 102:src/hw_config.c ****   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
+ 159              		.loc 1 102 0
+ 160 0032 4FF00C03 		mov	r3, #12
+ 161 0036 3B60     		str	r3, [r7, #0]
+ 103:src/hw_config.c ****   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+ 162              		.loc 1 103 0
+ 163 0038 4FF00203 		mov	r3, #2
+ 164 003c 3B71     		strb	r3, [r7, #4]
+ 104:src/hw_config.c ****   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+ 165              		.loc 1 104 0
+ 166 003e 4FF00003 		mov	r3, #0
+ 167 0042 BB71     		strb	r3, [r7, #6]
+ 105:src/hw_config.c ****   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+ 168              		.loc 1 105 0
+ 169 0044 4FF00003 		mov	r3, #0
+ 170 0048 FB71     		strb	r3, [r7, #7]
+ 106:src/hw_config.c ****   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+ 171              		.loc 1 106 0
+ 172 004a 4FF00203 		mov	r3, #2
+ 173 004e 7B71     		strb	r3, [r7, #5]
+ 107:src/hw_config.c ****   GPIO_Init(GPIOA, &GPIO_InitStructure);
+ 174              		.loc 1 107 0
+ 175 0050 4FF00000 		mov	r0, #0
+ 176 0054 C4F20200 		movt	r0, 16386
+ 177 0058 3B46     		mov	r3, r7
+ 178 005a 1946     		mov	r1, r3
+ 179 005c FFF7FEFF 		bl	GPIO_Init
+ 108:src/hw_config.c **** 
+ 109:src/hw_config.c ****   //Connect USART pins to AF
+ 110:src/hw_config.c ****   GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_USART2);
+ 180              		.loc 1 110 0
+ 181 0060 4FF00000 		mov	r0, #0
+ 182 0064 C4F20200 		movt	r0, 16386
+ 183 0068 4FF00201 		mov	r1, #2
+ 184 006c 4FF00702 		mov	r2, #7
+ 185 0070 FFF7FEFF 		bl	GPIO_PinAFConfig
+ 111:src/hw_config.c ****   GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_USART2);
+ 186              		.loc 1 111 0
+ 187 0074 4FF00000 		mov	r0, #0
+ 188 0078 C4F20200 		movt	r0, 16386
+ 189 007c 4FF00301 		mov	r1, #3
+ 190 0080 4FF00702 		mov	r2, #7
+ 191 0084 FFF7FEFF 		bl	GPIO_PinAFConfig
+ 112:src/hw_config.c **** 
+ 113:src/hw_config.c **** }
+ 192              		.loc 1 113 0
+ 193 0088 07F10807 		add	r7, r7, #8
+ 194 008c BD46     		mov	sp, r7
+ 195 008e 80BD     		pop	{r7, pc}
+ 196              		.cfi_endproc
+ 197              	.LFE112:
+ 199              		.section	.text.DMA_Configuration,"ax",%progbits
+ 200              		.align	2
+ 201              		.global	DMA_Configuration
+ 202              		.thumb
+ 203              		.thumb_func
+ 205              	DMA_Configuration:
+ 206              	.LFB113:
+ 114:src/hw_config.c **** 
+ 115:src/hw_config.c **** 
+ 116:src/hw_config.c **** 
+ 117:src/hw_config.c **** void DMA_Configuration(void){
+ 207              		.loc 1 117 0
+ 208              		.cfi_startproc
+ 209              		@ args = 0, pretend = 0, frame = 64
+ 210              		@ frame_needed = 1, uses_anonymous_args = 0
+ 211 0000 80B5     		push	{r7, lr}
+ 212              	.LCFI7:
+ 213              		.cfi_def_cfa_offset 8
+ 214              		.cfi_offset 14, -4
+ 215              		.cfi_offset 7, -8
+ 216 0002 90B0     		sub	sp, sp, #64
+ 217              	.LCFI8:
+ 218              		.cfi_def_cfa_offset 72
+ 219 0004 00AF     		add	r7, sp, #0
+ 220              	.LCFI9:
+ 221              		.cfi_def_cfa_register 7
+ 118:src/hw_config.c ****   DMA_InitTypeDef DMA_InitStructure;
+ 119:src/hw_config.c **** 
+ 120:src/hw_config.c ****   DMA_DeInit(DMA2_Stream4);
+ 222              		.loc 1 120 0
+ 223 0006 46F27040 		movw	r0, #25712
+ 224 000a C4F20200 		movt	r0, 16386
+ 225 000e FFF7FEFF 		bl	DMA_DeInit
+ 121:src/hw_config.c ****   DMA_StructInit(&DMA_InitStructure);
+ 226              		.loc 1 121 0
+ 227 0012 07F10403 		add	r3, r7, #4
+ 228 0016 1846     		mov	r0, r3
+ 229 0018 FFF7FEFF 		bl	DMA_StructInit
+ 122:src/hw_config.c ****   DMA_InitStructure.DMA_Channel = DMA_Channel_0;
+ 230              		.loc 1 122 0
+ 231 001c 4FF00003 		mov	r3, #0
+ 232 0020 7B60     		str	r3, [r7, #4]
+ 123:src/hw_config.c ****   DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) ADC1_DR_Address;
+ 233              		.loc 1 123 0
+ 234 0022 42F24C03 		movw	r3, #8268
+ 235 0026 C4F20103 		movt	r3, 16385
+ 236 002a BB60     		str	r3, [r7, #8]
+ 124:src/hw_config.c ****   DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) &ADCConvertedValue[0];
+ 237              		.loc 1 124 0
+ 238 002c 40F20003 		movw	r3, #:lower16:ADCConvertedValue
+ 239 0030 C0F20003 		movt	r3, #:upper16:ADCConvertedValue
+ 240 0034 FB60     		str	r3, [r7, #12]
+ 125:src/hw_config.c **** 
+ 126:src/hw_config.c ****   DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+ 241              		.loc 1 126 0
+ 242 0036 4FF00003 		mov	r3, #0
+ 243 003a 3B61     		str	r3, [r7, #16]
+ 127:src/hw_config.c **** 
+ 128:src/hw_config.c ****   DMA_InitStructure.DMA_BufferSize = 1;
+ 244              		.loc 1 128 0
+ 245 003c 4FF00103 		mov	r3, #1
+ 246 0040 7B61     		str	r3, [r7, #20]
+ 129:src/hw_config.c ****   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+ 247              		.loc 1 129 0
+ 248 0042 4FF00003 		mov	r3, #0
+ 249 0046 BB61     		str	r3, [r7, #24]
+ 130:src/hw_config.c ****   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+ 250              		.loc 1 130 0
+ 251 0048 4FF48063 		mov	r3, #1024
+ 252 004c FB61     		str	r3, [r7, #28]
+ 131:src/hw_config.c **** 
+ 132:src/hw_config.c ****   DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+ 253              		.loc 1 132 0
+ 254 004e 4FF40063 		mov	r3, #2048
+ 255 0052 3B62     		str	r3, [r7, #32]
+ 133:src/hw_config.c ****   DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+ 256              		.loc 1 133 0
+ 257 0054 4FF40053 		mov	r3, #8192
+ 258 0058 7B62     		str	r3, [r7, #36]
+ 134:src/hw_config.c ****   DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+ 259              		.loc 1 134 0
+ 260 005a 4FF40033 		mov	r3, #131072
+ 261 005e FB62     		str	r3, [r7, #44]
+ 135:src/hw_config.c ****   DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+ 262              		.loc 1 135 0
+ 263 0060 4FF48073 		mov	r3, #256
+ 264 0064 BB62     		str	r3, [r7, #40]
+ 136:src/hw_config.c **** 
+ 137:src/hw_config.c ****   DMA_Init(DMA2_Stream4, &DMA_InitStructure);
+ 265              		.loc 1 137 0
+ 266 0066 46F27040 		movw	r0, #25712
+ 267 006a C4F20200 		movt	r0, 16386
+ 268 006e 07F10403 		add	r3, r7, #4
+ 269 0072 1946     		mov	r1, r3
+ 270 0074 FFF7FEFF 		bl	DMA_Init
+ 138:src/hw_config.c ****   DMA_Cmd(DMA2_Stream4, ENABLE);
+ 271              		.loc 1 138 0
+ 272 0078 46F27040 		movw	r0, #25712
+ 273 007c C4F20200 		movt	r0, 16386
+ 274 0080 4FF00101 		mov	r1, #1
+ 275 0084 FFF7FEFF 		bl	DMA_Cmd
+ 139:src/hw_config.c **** }
+ 276              		.loc 1 139 0
+ 277 0088 07F14007 		add	r7, r7, #64
+ 278 008c BD46     		mov	sp, r7
+ 279 008e 80BD     		pop	{r7, pc}
+ 280              		.cfi_endproc
+ 281              	.LFE113:
+ 283              		.section	.text.ADC_Configuration,"ax",%progbits
+ 284              		.align	2
+ 285              		.global	ADC_Configuration
+ 286              		.thumb
+ 287              		.thumb_func
+ 289              	ADC_Configuration:
+ 290              	.LFB114:
+ 140:src/hw_config.c **** 
+ 141:src/hw_config.c **** void ADC_Configuration(void){
+ 291              		.loc 1 141 0
+ 292              		.cfi_startproc
+ 293              		@ args = 0, pretend = 0, frame = 24
+ 294              		@ frame_needed = 1, uses_anonymous_args = 0
+ 295 0000 80B5     		push	{r7, lr}
+ 296              	.LCFI10:
+ 297              		.cfi_def_cfa_offset 8
+ 298              		.cfi_offset 14, -4
+ 299              		.cfi_offset 7, -8
+ 300 0002 86B0     		sub	sp, sp, #24
+ 301              	.LCFI11:
+ 302              		.cfi_def_cfa_offset 32
+ 303 0004 00AF     		add	r7, sp, #0
+ 304              	.LCFI12:
+ 305              		.cfi_def_cfa_register 7
+ 142:src/hw_config.c ****   ADC_InitTypeDef ADC_InitStructure;
+ 143:src/hw_config.c **** 
+ 144:src/hw_config.c ****   
+ 145:src/hw_config.c **** 
+ 146:src/hw_config.c ****   //ADC Sturcture configuration
+ 147:src/hw_config.c ****   ADC_DeInit(); // Reset all parameters to their default values
+ 306              		.loc 1 147 0
+ 307 0006 FFF7FEFF 		bl	ADC_DeInit
+ 148:src/hw_config.c ****   ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+ 308              		.loc 1 148 0
+ 309 000a 4FF00003 		mov	r3, #0
+ 310 000e 3B60     		str	r3, [r7, #0]
+ 149:src/hw_config.c ****   ADC_InitStructure.ADC_ScanConvMode = ENABLE; // No scan?
+ 311              		.loc 1 149 0
+ 312 0010 4FF00103 		mov	r3, #1
+ 313 0014 3B71     		strb	r3, [r7, #4]
+ 150:src/hw_config.c ****   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE; //continuous conversion
+ 314              		.loc 1 150 0
+ 315 0016 4FF00103 		mov	r3, #1
+ 316 001a 7B71     		strb	r3, [r7, #5]
+ 151:src/hw_config.c ****   ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None; // no external trigge
+ 317              		.loc 1 151 0
+ 318 001c 4FF00003 		mov	r3, #0
+ 319 0020 BB60     		str	r3, [r7, #8]
+ 152:src/hw_config.c ****   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; // converted data will be shifted to the r
+ 320              		.loc 1 152 0
+ 321 0022 4FF00003 		mov	r3, #0
+ 322 0026 3B61     		str	r3, [r7, #16]
+ 153:src/hw_config.c ****   ADC_InitStructure.ADC_NbrOfConversion = 1; // Number of used ADC channels
+ 323              		.loc 1 153 0
+ 324 0028 4FF00103 		mov	r3, #1
+ 325 002c 3B75     		strb	r3, [r7, #20]
+ 154:src/hw_config.c ****   ADC_Init(ADC1, &ADC_InitStructure);  
+ 326              		.loc 1 154 0
+ 327 002e 4FF40050 		mov	r0, #8192
+ 328 0032 C4F20100 		movt	r0, 16385
+ 329 0036 3B46     		mov	r3, r7
+ 330 0038 1946     		mov	r1, r3
+ 331 003a FFF7FEFF 		bl	ADC_Init
+ 155:src/hw_config.c **** 
+ 156:src/hw_config.c ****   // use channel 10 from ADC1, with sample time 15 cycles
+ 157:src/hw_config.c ****   ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 1, ADC_SampleTime_15Cycles);
+ 332              		.loc 1 157 0
+ 333 003e 4FF40050 		mov	r0, #8192
+ 334 0042 C4F20100 		movt	r0, 16385
+ 335 0046 4FF00A01 		mov	r1, #10
+ 336 004a 4FF00102 		mov	r2, #1
+ 337 004e 4FF00103 		mov	r3, #1
+ 338 0052 FFF7FEFF 		bl	ADC_RegularChannelConfig
+ 158:src/hw_config.c ****   
+ 159:src/hw_config.c ****   ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
+ 339              		.loc 1 159 0
+ 340 0056 4FF40050 		mov	r0, #8192
+ 341 005a C4F20100 		movt	r0, 16385
+ 342 005e 4FF00101 		mov	r1, #1
+ 343 0062 FFF7FEFF 		bl	ADC_DMARequestAfterLastTransferCmd
+ 160:src/hw_config.c ****   
+ 161:src/hw_config.c ****   //Enable ADC1 use DMA
+ 162:src/hw_config.c ****   ADC_DMACmd(ADC1, ENABLE);
+ 344              		.loc 1 162 0
+ 345 0066 4FF40050 		mov	r0, #8192
+ 346 006a C4F20100 		movt	r0, 16385
+ 347 006e 4FF00101 		mov	r1, #1
+ 348 0072 FFF7FEFF 		bl	ADC_DMACmd
+ 163:src/hw_config.c ****   //Enable ADC1
+ 164:src/hw_config.c ****   ADC_Cmd(ADC1, ENABLE);
+ 349              		.loc 1 164 0
+ 350 0076 4FF40050 		mov	r0, #8192
+ 351 007a C4F20100 		movt	r0, 16385
+ 352 007e 4FF00101 		mov	r1, #1
+ 353 0082 FFF7FEFF 		bl	ADC_Cmd
+ 165:src/hw_config.c **** /*
+ 166:src/hw_config.c ****   //Calibrate ADC1
+ 167:src/hw_config.c ****   ADC_ResetCalibration(ADC1);
+ 168:src/hw_config.c ****   while(ADC_GetResetCalibrationStatus(ADC1));
+ 169:src/hw_config.c ****   ADC_StartCalibration(ADC1);
+ 170:src/hw_config.c ****   while(ADC_GetCalibrationStatus(ADC1));
+ 171:src/hw_config.c **** */
+ 172:src/hw_config.c **** }
+ 354              		.loc 1 172 0
+ 355 0086 07F11807 		add	r7, r7, #24
+ 356 008a BD46     		mov	sp, r7
+ 357 008c 80BD     		pop	{r7, pc}
+ 358              		.cfi_endproc
+ 359              	.LFE114:
+ 361 008e 00BF     		.section	.text.TIM_Configuration,"ax",%progbits
+ 362              		.align	2
+ 363              		.global	TIM_Configuration
+ 364              		.thumb
+ 365              		.thumb_func
+ 367              	TIM_Configuration:
+ 368              	.LFB115:
+ 173:src/hw_config.c **** 
+ 174:src/hw_config.c **** /**
+ 175:src/hw_config.c ****   * @brief  configure the TIM4 for PWM mode
+ 176:src/hw_config.c ****   * @param  None
+ 177:src/hw_config.c ****   * @retval None
+ 178:src/hw_config.c ****   */
+ 179:src/hw_config.c **** void TIM_Configuration(void)
+ 180:src/hw_config.c **** {
+ 369              		.loc 1 180 0
+ 370              		.cfi_startproc
+ 371              		@ args = 0, pretend = 0, frame = 32
+ 372              		@ frame_needed = 1, uses_anonymous_args = 0
+ 373 0000 80B5     		push	{r7, lr}
+ 374              	.LCFI13:
+ 375              		.cfi_def_cfa_offset 8
+ 376              		.cfi_offset 14, -4
+ 377              		.cfi_offset 7, -8
+ 378 0002 88B0     		sub	sp, sp, #32
+ 379              	.LCFI14:
+ 380              		.cfi_def_cfa_offset 40
+ 381 0004 00AF     		add	r7, sp, #0
+ 382              	.LCFI15:
+ 383              		.cfi_def_cfa_register 7
+ 181:src/hw_config.c ****     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
+ 182:src/hw_config.c ****     TIM_OCInitTypeDef TIM_OCInitStruct;
+ 183:src/hw_config.c **** 
+ 184:src/hw_config.c ****     // Let PWM frequency equal 400Hz.
+ 185:src/hw_config.c ****     // Let period equal 1000. Therefore, timer runs from zero to 1000. Gives 0.1Hz resolution.
+ 186:src/hw_config.c ****     // Solving for prescaler gives 240.
+ 187:src/hw_config.c ****     TIM_TimeBaseStructInit( &TIM_TimeBaseInitStruct );
+ 384              		.loc 1 187 0
+ 385 0006 07F11403 		add	r3, r7, #20
+ 386 000a 1846     		mov	r0, r3
+ 387 000c FFF7FEFF 		bl	TIM_TimeBaseStructInit
+ 188:src/hw_config.c ****     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV4;
+ 388              		.loc 1 188 0
+ 389 0010 4FF40073 		mov	r3, #512
+ 390 0014 BB83     		strh	r3, [r7, #28]	@ movhi
+ 189:src/hw_config.c ****     TIM_TimeBaseInitStruct.TIM_Period = 2500 - 1;//6720 - 1;//3360 - 1;   
+ 391              		.loc 1 189 0
+ 392 0016 40F6C313 		movw	r3, #2499
+ 393 001a BB61     		str	r3, [r7, #24]
+ 190:src/hw_config.c ****     TIM_TimeBaseInitStruct.TIM_Prescaler = 84 - 1;//40 - 1;//500 - 1; 
+ 394              		.loc 1 190 0
+ 395 001c 4FF05303 		mov	r3, #83
+ 396 0020 BB82     		strh	r3, [r7, #20]	@ movhi
+ 191:src/hw_config.c ****     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;    
+ 397              		.loc 1 191 0
+ 398 0022 4FF00003 		mov	r3, #0
+ 399 0026 FB82     		strh	r3, [r7, #22]	@ movhi
+ 192:src/hw_config.c ****     TIM_TimeBaseInit( TIM4, &TIM_TimeBaseInitStruct );
+ 400              		.loc 1 192 0
+ 401 0028 4FF40060 		mov	r0, #2048
+ 402 002c C4F20000 		movt	r0, 16384
+ 403 0030 07F11403 		add	r3, r7, #20
+ 404 0034 1946     		mov	r1, r3
+ 405 0036 FFF7FEFF 		bl	TIM_TimeBaseInit
+ 193:src/hw_config.c ****     
+ 194:src/hw_config.c ****     TIM_OCStructInit( &TIM_OCInitStruct );
+ 406              		.loc 1 194 0
+ 407 003a 3B46     		mov	r3, r7
+ 408 003c 1846     		mov	r0, r3
+ 409 003e FFF7FEFF 		bl	TIM_OCStructInit
+ 195:src/hw_config.c ****     TIM_OCInitStruct.TIM_OutputState = TIM_OutputState_Enable;
+ 410              		.loc 1 195 0
+ 411 0042 4FF00103 		mov	r3, #1
+ 412 0046 7B80     		strh	r3, [r7, #2]	@ movhi
+ 196:src/hw_config.c ****     TIM_OCInitStruct.TIM_OCMode = TIM_OCMode_PWM1;
+ 413              		.loc 1 196 0
+ 414 0048 4FF06003 		mov	r3, #96
+ 415 004c 3B80     		strh	r3, [r7, #0]	@ movhi
+ 197:src/hw_config.c ****     
+ 198:src/hw_config.c ****     // Initial duty cycle equals 0%. Value can range from zero to 65535.
+ 199:src/hw_config.c ****     //TIM_Pulse = TIM4_CCR1 register (16 bits)
+ 200:src/hw_config.c ****     TIM_OCInitStruct.TIM_Pulse = 0; //(0=Always Off, 65535=Always On)
+ 416              		.loc 1 200 0
+ 417 004e 4FF00003 		mov	r3, #0
+ 418 0052 BB60     		str	r3, [r7, #8]
+ 201:src/hw_config.c ****  
+ 202:src/hw_config.c ****     TIM_OC1Init( TIM4, &TIM_OCInitStruct ); // Channel 1  LED
+ 419              		.loc 1 202 0
+ 420 0054 4FF40060 		mov	r0, #2048
+ 421 0058 C4F20000 		movt	r0, 16384
+ 422 005c 3B46     		mov	r3, r7
+ 423 005e 1946     		mov	r1, r3
+ 424 0060 FFF7FEFF 		bl	TIM_OC1Init
+ 203:src/hw_config.c ****     TIM_OC2Init( TIM4, &TIM_OCInitStruct ); // Channel 2  LED
+ 425              		.loc 1 203 0
+ 426 0064 4FF40060 		mov	r0, #2048
+ 427 0068 C4F20000 		movt	r0, 16384
+ 428 006c 3B46     		mov	r3, r7
+ 429 006e 1946     		mov	r1, r3
+ 430 0070 FFF7FEFF 		bl	TIM_OC2Init
+ 204:src/hw_config.c ****     TIM_OC3Init( TIM4, &TIM_OCInitStruct ); // Channel 3  LED
+ 431              		.loc 1 204 0
+ 432 0074 4FF40060 		mov	r0, #2048
+ 433 0078 C4F20000 		movt	r0, 16384
+ 434 007c 3B46     		mov	r3, r7
+ 435 007e 1946     		mov	r1, r3
+ 436 0080 FFF7FEFF 		bl	TIM_OC3Init
+ 205:src/hw_config.c ****     TIM_OC4Init( TIM4, &TIM_OCInitStruct ); // Channel 4  LED
+ 437              		.loc 1 205 0
+ 438 0084 4FF40060 		mov	r0, #2048
+ 439 0088 C4F20000 		movt	r0, 16384
+ 440 008c 3B46     		mov	r3, r7
+ 441 008e 1946     		mov	r1, r3
+ 442 0090 FFF7FEFF 		bl	TIM_OC4Init
+ 206:src/hw_config.c ****  
+ 207:src/hw_config.c ****     TIM_Cmd( TIM4, ENABLE );
+ 443              		.loc 1 207 0
+ 444 0094 4FF40060 		mov	r0, #2048
+ 445 0098 C4F20000 		movt	r0, 16384
+ 446 009c 4FF00101 		mov	r1, #1
+ 447 00a0 FFF7FEFF 		bl	TIM_Cmd
+ 208:src/hw_config.c **** }
+ 448              		.loc 1 208 0
+ 449 00a4 07F12007 		add	r7, r7, #32
+ 450 00a8 BD46     		mov	sp, r7
+ 451 00aa 80BD     		pop	{r7, pc}
+ 452              		.cfi_endproc
+ 453              	.LFE115:
+ 455              		.section	.text.USART_Configuration,"ax",%progbits
+ 456              		.align	2
+ 457              		.global	USART_Configuration
+ 458              		.thumb
+ 459              		.thumb_func
+ 461              	USART_Configuration:
+ 462              	.LFB116:
+ 209:src/hw_config.c **** 
+ 210:src/hw_config.c **** /**
+ 211:src/hw_config.c ****   * @brief  configure the USART
+ 212:src/hw_config.c ****   * @param  None
+ 213:src/hw_config.c ****   * @retval None
+ 214:src/hw_config.c ****   */
+ 215:src/hw_config.c **** void USART_Configuration(void)
+ 216:src/hw_config.c **** {
+ 463              		.loc 1 216 0
+ 464              		.cfi_startproc
+ 465              		@ args = 0, pretend = 0, frame = 24
+ 466              		@ frame_needed = 1, uses_anonymous_args = 0
+ 467 0000 80B5     		push	{r7, lr}
+ 468              	.LCFI16:
+ 469              		.cfi_def_cfa_offset 8
+ 470              		.cfi_offset 14, -4
+ 471              		.cfi_offset 7, -8
+ 472 0002 86B0     		sub	sp, sp, #24
+ 473              	.LCFI17:
+ 474              		.cfi_def_cfa_offset 32
+ 475 0004 00AF     		add	r7, sp, #0
+ 476              	.LCFI18:
+ 477              		.cfi_def_cfa_register 7
+ 217:src/hw_config.c ****   //Structure With Data For USART Configuration
+ 218:src/hw_config.c ****   USART_InitTypeDef USART_InitStructure;
+ 219:src/hw_config.c ****   
+ 220:src/hw_config.c ****   //USART Parameters
+ 221:src/hw_config.c ****   USART_InitStructure.USART_BaudRate = 19200;
+ 478              		.loc 1 221 0
+ 479 0006 4FF49643 		mov	r3, #19200
+ 480 000a BB60     		str	r3, [r7, #8]
+ 222:src/hw_config.c ****   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+ 481              		.loc 1 222 0
+ 482 000c 4FF00003 		mov	r3, #0
+ 483 0010 BB81     		strh	r3, [r7, #12]	@ movhi
+ 223:src/hw_config.c ****   USART_InitStructure.USART_StopBits = USART_StopBits_1;
+ 484              		.loc 1 223 0
+ 485 0012 4FF00003 		mov	r3, #0
+ 486 0016 FB81     		strh	r3, [r7, #14]	@ movhi
+ 224:src/hw_config.c ****   USART_InitStructure.USART_Parity = USART_Parity_No ;
+ 487              		.loc 1 224 0
+ 488 0018 4FF00003 		mov	r3, #0
+ 489 001c 3B82     		strh	r3, [r7, #16]	@ movhi
+ 225:src/hw_config.c ****   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;  
+ 490              		.loc 1 225 0
+ 491 001e 4FF00003 		mov	r3, #0
+ 492 0022 BB82     		strh	r3, [r7, #20]	@ movhi
+ 226:src/hw_config.c ****   USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx ;
+ 493              		.loc 1 226 0
+ 494 0024 4FF00C03 		mov	r3, #12
+ 495 0028 7B82     		strh	r3, [r7, #18]	@ movhi
+ 227:src/hw_config.c **** 
+ 228:src/hw_config.c ****   //Configuring And Enabling USART2
+ 229:src/hw_config.c ****   USART_Init(USART2, &USART_InitStructure);
+ 496              		.loc 1 229 0
+ 497 002a 4FF48840 		mov	r0, #17408
+ 498 002e C4F20000 		movt	r0, 16384
+ 499 0032 07F10803 		add	r3, r7, #8
+ 500 0036 1946     		mov	r1, r3
+ 501 0038 FFF7FEFF 		bl	USART_Init
+ 230:src/hw_config.c ****   
+ 231:src/hw_config.c **** 
+ 232:src/hw_config.c ****   //Enable USART Interrupt ----
+ 233:src/hw_config.c ****   NVIC_InitTypeDef NVIC_InitStructure;
+ 234:src/hw_config.c **** 
+ 235:src/hw_config.c ****   USART_ClearFlag(USART2, USART_FLAG_TC);
+ 502              		.loc 1 235 0
+ 503 003c 4FF48840 		mov	r0, #17408
+ 504 0040 C4F20000 		movt	r0, 16384
+ 505 0044 4FF04001 		mov	r1, #64
+ 506 0048 FFF7FEFF 		bl	USART_ClearFlag
+ 236:src/hw_config.c ****   /* Enable transmit and receive interrupts for the USART2. */
+ 237:src/hw_config.c ****   USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
+ 507              		.loc 1 237 0
+ 508 004c 4FF48840 		mov	r0, #17408
+ 509 0050 C4F20000 		movt	r0, 16384
+ 510 0054 40F22771 		movw	r1, #1831
+ 511 0058 4FF00002 		mov	r2, #0
+ 512 005c FFF7FEFF 		bl	USART_ITConfig
+ 238:src/hw_config.c ****   USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+ 513              		.loc 1 238 0
+ 514 0060 4FF48840 		mov	r0, #17408
+ 515 0064 C4F20000 		movt	r0, 16384
+ 516 0068 40F22551 		movw	r1, #1317
+ 517 006c 4FF00102 		mov	r2, #1
+ 518 0070 FFF7FEFF 		bl	USART_ITConfig
+ 239:src/hw_config.c ****   /* Enable the USART2 IRQ in the NVIC module (so that the USART2 interrupt
+ 240:src/hw_config.c ****    * handler is enabled). */
+ 241:src/hw_config.c ****   NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;
+ 519              		.loc 1 241 0
+ 520 0074 4FF02603 		mov	r3, #38
+ 521 0078 3B71     		strb	r3, [r7, #4]
+ 242:src/hw_config.c ****   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY + 0x1
+ 522              		.loc 1 242 0
+ 523 007a 4FF0CF03 		mov	r3, #207
+ 524 007e 7B71     		strb	r3, [r7, #5]
+ 243:src/hw_config.c ****   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+ 525              		.loc 1 243 0
+ 526 0080 4FF00003 		mov	r3, #0
+ 527 0084 BB71     		strb	r3, [r7, #6]
+ 244:src/hw_config.c ****   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+ 528              		.loc 1 244 0
+ 529 0086 4FF00103 		mov	r3, #1
+ 530 008a FB71     		strb	r3, [r7, #7]
+ 245:src/hw_config.c ****   NVIC_Init(&NVIC_InitStructure);
+ 531              		.loc 1 245 0
+ 532 008c 07F10403 		add	r3, r7, #4
+ 533 0090 1846     		mov	r0, r3
+ 534 0092 FFF7FEFF 		bl	NVIC_Init
+ 246:src/hw_config.c **** 
+ 247:src/hw_config.c ****   USART_Cmd(USART2, ENABLE);
+ 535              		.loc 1 247 0
+ 536 0096 4FF48840 		mov	r0, #17408
+ 537 009a C4F20000 		movt	r0, 16384
+ 538 009e 4FF00101 		mov	r1, #1
+ 539 00a2 FFF7FEFF 		bl	USART_Cmd
+ 248:src/hw_config.c **** }
+ 540              		.loc 1 248 0
+ 541 00a6 07F11807 		add	r7, r7, #24
+ 542 00aa BD46     		mov	sp, r7
+ 543 00ac 80BD     		pop	{r7, pc}
+ 544              		.cfi_endproc
+ 545              	.LFE116:
+ 547 00ae 00BF     		.text
+ 548              	.Letext0:
+ 549              		.file 2 "/usr/local/csl/arm-2012.03/bin/../lib/gcc/arm-none-eabi/4.6.3/../../../../arm-none-eabi/i
+ 550              		.file 3 "libs/Device/STM32F4xx/Include/stm32f4xx.h"
+ 551              		.file 4 "libs/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_adc.h"
+ 552              		.file 5 "libs/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_dma.h"
+ 553              		.file 6 "libs/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_gpio.h"
+ 554              		.file 7 "libs/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_tim.h"
+ 555              		.file 8 "libs/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_usart.h"
+ 556              		.file 9 "libs/STM32F4xx_StdPeriph_Driver/inc/misc.h"
+ 557              		.file 10 "libs/CMSIS/Include/core_cm4.h"
+ 558              		.file 11 "src/include/hw_config.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 hw_config.c
+                            *COM*:00000002 ADCConvertedValue
+     /tmp/cc5auBYj.s:21     .text.prvSetupHardware:00000000 $t
+     /tmp/cc5auBYj.s:26     .text.prvSetupHardware:00000000 prvSetupHardware
+     /tmp/cc5auBYj.s:73     .text.RCC_Configuration:00000000 RCC_Configuration
+     /tmp/cc5auBYj.s:122    .text.GPIO_Configuration:00000000 GPIO_Configuration
+     /tmp/cc5auBYj.s:461    .text.USART_Configuration:00000000 USART_Configuration
+     /tmp/cc5auBYj.s:205    .text.DMA_Configuration:00000000 DMA_Configuration
+     /tmp/cc5auBYj.s:289    .text.ADC_Configuration:00000000 ADC_Configuration
+     /tmp/cc5auBYj.s:68     .text.RCC_Configuration:00000000 $t
+     /tmp/cc5auBYj.s:117    .text.GPIO_Configuration:00000000 $t
+     /tmp/cc5auBYj.s:200    .text.DMA_Configuration:00000000 $t
+     /tmp/cc5auBYj.s:284    .text.ADC_Configuration:00000000 $t
+     /tmp/cc5auBYj.s:362    .text.TIM_Configuration:00000000 $t
+     /tmp/cc5auBYj.s:367    .text.TIM_Configuration:00000000 TIM_Configuration
+     /tmp/cc5auBYj.s:456    .text.USART_Configuration:00000000 $t
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+NVIC_SetVectorTable
+NVIC_PriorityGroupConfig
+ADC_SoftwareStartConv
+RCC_AHB1PeriphClockCmd
+RCC_APB2PeriphClockCmd
+RCC_APB1PeriphClockCmd
+GPIO_StructInit
+GPIO_Init
+GPIO_PinAFConfig
+DMA_DeInit
+DMA_StructInit
+DMA_Init
+DMA_Cmd
+ADC_DeInit
+ADC_Init
+ADC_RegularChannelConfig
+ADC_DMARequestAfterLastTransferCmd
+ADC_DMACmd
+ADC_Cmd
+TIM_TimeBaseStructInit
+TIM_TimeBaseInit
+TIM_OCStructInit
+TIM_OC1Init
+TIM_OC2Init
+TIM_OC3Init
+TIM_OC4Init
+TIM_Cmd
+USART_Init
+USART_ClearFlag
+USART_ITConfig
+NVIC_Init
+USART_Cmd

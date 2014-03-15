@@ -15,20 +15,20 @@ TARGET = $(OBJDIR)/STM32F4_Test
 # Define all C source files (dependencies are generated automatically)
 #
 SOURCES += src/uart.c
-SOURCES += src/I2C.c
+#SOURCES += src/I2C.c
 SOURCES += src/ustime.c
 SOURCES += src/main.c
 SOURCES += src/startup_stm32f4xx.s
 SOURCES += src/system_stm32f4xx.c
 SOURCES += src/syscalls.c
 SOURCES += src/modbus.c
-SOURCES += src/test.c
+#SOURCES += src/test.c
 SOURCES += src/shell.c
 SOURCES += src/hw_it.c
 
 SOURCES += src/stm32f4_discovery.c
-SOURCES += src/stm32f4_discovery_lis3dsh.c
-SOURCES += src/stm32f4_discovery_l3g4200d.c
+#SOURCES += src/stm32f4_discovery_lis3dsh.c
+#SOURCES += src/stm32f4_discovery_l3g4200d.c
 SOURCES += src/hw_config.c
 
 SOURCES += FreeRTOS/Source/timers.c

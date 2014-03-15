@@ -1,0 +1,923 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"shell.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text.strcmp,"ax",%progbits
+  20              		.align	2
+  21              		.global	strcmp
+  22              		.thumb
+  23              		.thumb_func
+  25              	strcmp:
+  26              	.LFB110:
+  27              		.file 1 "src/shell.c"
+   1:src/shell.c   **** /* Scheduler includes. */
+   2:src/shell.c   **** #include "FreeRTOS.h"
+   3:src/shell.c   **** #include "task.h"
+   4:src/shell.c   **** #include "queue.h"
+   5:src/shell.c   **** #include "semphr.h"
+   6:src/shell.c   **** 
+   7:src/shell.c   **** #include "stm32f4xx.h"
+   8:src/shell.c   **** 
+   9:src/shell.c   **** #define MAX_ARGC 10
+  10:src/shell.c   **** #define MAX_CMDNAME 10
+  11:src/shell.c   **** #define MAX_CMDHELP 10
+  12:src/shell.c   **** #define HISTORY_COUNT 1
+  13:src/shell.c   **** #define CMDBUF_SIZE 20
+  14:src/shell.c   **** 
+  15:src/shell.c   **** int strcmp(const char *a, const char *b) __attribute__ ((naked));
+  16:src/shell.c   **** int strcmp(const char *a, const char *b)
+  17:src/shell.c   **** {
+  28              		.loc 1 17 0
+  29              		.cfi_startproc
+  30              		@ Naked Function: prologue and epilogue provided by programmer.
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 1, uses_anonymous_args = 0
+  18:src/shell.c   ****         __asm__(
+  33              		.loc 1 18 0
+  34              	@ 18 "src/shell.c" 1
+  35              		strcmp_lop:                
+  36 0000 10F8012B 	   ldrb    r2, [r0],#1     
+  37 0004 11F8013B 	   ldrb    r3, [r1],#1     
+  38 0008 012A     	   cmp     r2, #1          
+  39 000a 88BF     	   it      hi              
+  40 000c 9A42     	   cmphi   r2, r3          
+  41 000e 3FF4F7AF 	   beq     strcmp_lop      
+  42 0012 A2EB0300 	        sub     r0, r2, r3          
+  43 0016 7047     	   bx      lr              
+  44              	
+  45              	@ 0 "" 2
+  19:src/shell.c   ****         "strcmp_lop:                \n"
+  20:src/shell.c   ****         "   ldrb    r2, [r0],#1     \n"
+  21:src/shell.c   ****         "   ldrb    r3, [r1],#1     \n"
+  22:src/shell.c   ****         "   cmp     r2, #1          \n"
+  23:src/shell.c   ****         "   it      hi              \n"
+  24:src/shell.c   ****         "   cmphi   r2, r3          \n"
+  25:src/shell.c   ****         "   beq     strcmp_lop      \n"
+  26:src/shell.c   ****                 "        sub     r0, r2, r3          \n"
+  27:src/shell.c   ****         "   bx      lr              \n"
+  28:src/shell.c   ****                 :::
+  29:src/shell.c   ****         );
+  30:src/shell.c   **** }
+  46              		.loc 1 30 0
+  47              		.thumb
+  48 0018 1846     		mov	r0, r3
+  49              		.cfi_endproc
+  50              	.LFE110:
+  52              		.global	next_line
+  53 001a 00BF     		.section	.data.next_line,"aw",%progbits
+  54              		.align	2
+  57              	next_line:
+  58 0000 0A       		.byte	10
+  59 0001 0D       		.byte	13
+  60 0002 00       		.byte	0
+  61              		.comm	cmd,20,4
+  62              		.global	cur_his
+  63 0003 00       		.section	.bss.cur_his,"aw",%nobits
+  64              		.align	2
+  67              	cur_his:
+  68 0000 00000000 		.space	4
+  69              		.comm	CMD_TYPE,1,1
+  70              		.global	cmd_data
+  71              		.section	.rodata.cmd_data,"a",%progbits
+  72              		.align	2
+  75              	cmd_data:
+  76 0000 70776D00 		.ascii	"pwm\000"
+  77 0004 00000000 		.space	7
+  77      000000
+  78 000b 00       		.space	1
+  79 000c 00000000 		.word	pwm
+  80 0010 70776D00 		.ascii	"pwm\000"
+  81 0014 00000000 		.space	7
+  81      000000
+  82 001b 00       		.space	1
+  83 001c 00000000 		.space	84
+  83      00000000 
+  83      00000000 
+  83      00000000 
+  83      00000000 
+  84              		.section	.text.pwm,"ax",%progbits
+  85              		.align	2
+  86              		.global	pwm
+  87              		.thumb
+  88              		.thumb_func
+  90              	pwm:
+  91              	.LFB111:
+  31:src/shell.c   **** 
+  32:src/shell.c   **** 
+  33:src/shell.c   **** 
+  34:src/shell.c   **** extern xQueueHandle xQueueUARTSend;
+  35:src/shell.c   **** extern xQueueHandle xQueueUARTRecvie;
+  36:src/shell.c   **** 
+  37:src/shell.c   **** 
+  38:src/shell.c   **** char next_line[3] = {'\n','\r','\0'};
+  39:src/shell.c   **** char cmd[HISTORY_COUNT][CMDBUF_SIZE];
+  40:src/shell.c   **** int cur_his=0;
+  41:src/shell.c   **** 
+  42:src/shell.c   **** /* Command handlers. */
+  43:src/shell.c   **** void pwm(int argc, char *argv[]);
+  44:src/shell.c   **** void pitch(int argc, char* argv[]);
+  45:src/shell.c   **** void roll(int argc, char* argv[]);
+  46:src/shell.c   **** void land(int argc, char* argv[]);
+  47:src/shell.c   **** 
+  48:src/shell.c   **** /* Enumeration for command types. */
+  49:src/shell.c   **** enum {
+  50:src/shell.c   **** 	CMD_PWM = 0,
+  51:src/shell.c   **** 	CMD_PITCH,
+  52:src/shell.c   **** 	CMD_ROLL,
+  53:src/shell.c   **** 	CMD_LEAD,
+  54:src/shell.c   **** 	CMD_COUNT
+  55:src/shell.c   **** } CMD_TYPE;
+  56:src/shell.c   **** 
+  57:src/shell.c   **** /* Structure for command handler. */
+  58:src/shell.c   **** typedef struct {
+  59:src/shell.c   **** 	char cmd[MAX_CMDNAME + 1];
+  60:src/shell.c   **** 	void (*func)(int, char**);
+  61:src/shell.c   **** 	char description[MAX_CMDHELP + 1];
+  62:src/shell.c   **** } hcmd_entry;
+  63:src/shell.c   **** 
+  64:src/shell.c   **** const hcmd_entry cmd_data[CMD_COUNT] = {
+  65:src/shell.c   **** 	[CMD_PWM] = {.cmd = "pwm", .func = pwm, .description = "pwm"}
+  66:src/shell.c   **** 	//[CMD_PITCH] = {.cmd = "pitch", .func = pitch, .description = "pitch"},
+  67:src/shell.c   **** 	//[CMD_ROLL] = {.cmd = "roll", .func = roll, .description = "roll"},
+  68:src/shell.c   **** 	//[CMD_LEAD] = {.cmd = "land", .func = land, .description = "lead"}
+  69:src/shell.c   **** };
+  70:src/shell.c   **** 
+  71:src/shell.c   **** 
+  72:src/shell.c   **** 
+  73:src/shell.c   **** void pwm(int argc, char *argv[]){
+  92              		.loc 1 73 0
+  93              		.cfi_startproc
+  94              		@ args = 0, pretend = 0, frame = 8
+  95              		@ frame_needed = 1, uses_anonymous_args = 0
+  96              		@ link register save eliminated.
+  97 0000 80B4     		push	{r7}
+  98              	.LCFI0:
+  99              		.cfi_def_cfa_offset 4
+ 100              		.cfi_offset 7, -4
+ 101 0002 83B0     		sub	sp, sp, #12
+ 102              	.LCFI1:
+ 103              		.cfi_def_cfa_offset 16
+ 104 0004 00AF     		add	r7, sp, #0
+ 105              	.LCFI2:
+ 106              		.cfi_def_cfa_register 7
+ 107 0006 7860     		str	r0, [r7, #4]
+ 108 0008 3960     		str	r1, [r7, #0]
+  74:src/shell.c   **** 
+  75:src/shell.c   **** }
+ 109              		.loc 1 75 0
+ 110 000a 07F10C07 		add	r7, r7, #12
+ 111 000e BD46     		mov	sp, r7
+ 112 0010 80BC     		pop	{r7}
+ 113 0012 7047     		bx	lr
+ 114              		.cfi_endproc
+ 115              	.LFE111:
+ 117              		.section	.text.Delay_5ms,"ax",%progbits
+ 118              		.align	2
+ 119              		.global	Delay_5ms
+ 120              		.thumb
+ 121              		.thumb_func
+ 123              	Delay_5ms:
+ 124              	.LFB112:
+  76:src/shell.c   **** 
+  77:src/shell.c   **** void Delay_5ms( int nCnt_1ms )
+  78:src/shell.c   **** {
+ 125              		.loc 1 78 0
+ 126              		.cfi_startproc
+ 127              		@ args = 0, pretend = 0, frame = 16
+ 128              		@ frame_needed = 1, uses_anonymous_args = 0
+ 129              		@ link register save eliminated.
+ 130 0000 80B4     		push	{r7}
+ 131              	.LCFI3:
+ 132              		.cfi_def_cfa_offset 4
+ 133              		.cfi_offset 7, -4
+ 134 0002 85B0     		sub	sp, sp, #20
+ 135              	.LCFI4:
+ 136              		.cfi_def_cfa_offset 24
+ 137 0004 00AF     		add	r7, sp, #0
+ 138              	.LCFI5:
+ 139              		.cfi_def_cfa_register 7
+ 140 0006 7860     		str	r0, [r7, #4]
+  79:src/shell.c   ****     int nCnt;
+  80:src/shell.c   ****     for(; nCnt_1ms != 0; nCnt_1ms--)
+ 141              		.loc 1 80 0
+ 142 0008 0EE0     		b	.L4
+ 143              	.L7:
+  81:src/shell.c   ****     	for(nCnt = 56580; nCnt != 0; nCnt--);
+ 144              		.loc 1 81 0
+ 145 000a 4DF60453 		movw	r3, #56580
+ 146 000e FB60     		str	r3, [r7, #12]
+ 147 0010 03E0     		b	.L5
+ 148              	.L6:
+ 149              		.loc 1 81 0 is_stmt 0 discriminator 2
+ 150 0012 FB68     		ldr	r3, [r7, #12]
+ 151 0014 03F1FF33 		add	r3, r3, #-1
+ 152 0018 FB60     		str	r3, [r7, #12]
+ 153              	.L5:
+ 154              		.loc 1 81 0 discriminator 1
+ 155 001a FB68     		ldr	r3, [r7, #12]
+ 156 001c 002B     		cmp	r3, #0
+ 157 001e F8D1     		bne	.L6
+  80:src/shell.c   ****     for(; nCnt_1ms != 0; nCnt_1ms--)
+ 158              		.loc 1 80 0 is_stmt 1
+ 159 0020 7B68     		ldr	r3, [r7, #4]
+ 160 0022 03F1FF33 		add	r3, r3, #-1
+ 161 0026 7B60     		str	r3, [r7, #4]
+ 162              	.L4:
+  80:src/shell.c   ****     for(; nCnt_1ms != 0; nCnt_1ms--)
+ 163              		.loc 1 80 0 is_stmt 0 discriminator 1
+ 164 0028 7B68     		ldr	r3, [r7, #4]
+ 165 002a 002B     		cmp	r3, #0
+ 166 002c EDD1     		bne	.L7
+  82:src/shell.c   **** }
+ 167              		.loc 1 82 0 is_stmt 1
+ 168 002e 07F11407 		add	r7, r7, #20
+ 169 0032 BD46     		mov	sp, r7
+ 170 0034 80BC     		pop	{r7}
+ 171 0036 7047     		bx	lr
+ 172              		.cfi_endproc
+ 173              	.LFE112:
+ 175              		.section	.text.cmdtok,"ax",%progbits
+ 176              		.align	2
+ 177              		.global	cmdtok
+ 178              		.thumb
+ 179              		.thumb_func
+ 181              	cmdtok:
+ 182              	.LFB113:
+  83:src/shell.c   **** 
+  84:src/shell.c   **** 
+  85:src/shell.c   **** /* ref tim37021 */
+  86:src/shell.c   **** int cmdtok(char *argv[], char *cmd)
+  87:src/shell.c   **** {
+ 183              		.loc 1 87 0
+ 184              		.cfi_startproc
+ 185              		@ args = 0, pretend = 0, frame = 40
+ 186              		@ frame_needed = 1, uses_anonymous_args = 0
+ 187 0000 80B5     		push	{r7, lr}
+ 188              	.LCFI6:
+ 189              		.cfi_def_cfa_offset 8
+ 190              		.cfi_offset 14, -4
+ 191              		.cfi_offset 7, -8
+ 192 0002 8AB0     		sub	sp, sp, #40
+ 193              	.LCFI7:
+ 194              		.cfi_def_cfa_offset 48
+ 195 0004 00AF     		add	r7, sp, #0
+ 196              	.LCFI8:
+ 197              		.cfi_def_cfa_register 7
+ 198 0006 7860     		str	r0, [r7, #4]
+ 199 0008 3960     		str	r1, [r7, #0]
+  88:src/shell.c   **** 	char tmp[CMDBUF_SIZE];
+  89:src/shell.c   **** 	int i = 0;
+ 200              		.loc 1 89 0
+ 201 000a 4FF00003 		mov	r3, #0
+ 202 000e 7B62     		str	r3, [r7, #36]
+  90:src/shell.c   **** 	int j = 0;
+ 203              		.loc 1 90 0
+ 204 0010 4FF00003 		mov	r3, #0
+ 205 0014 3B62     		str	r3, [r7, #32]
+  91:src/shell.c   **** 
+  92:src/shell.c   **** 	
+  93:src/shell.c   **** 	while (*cmd != '\0'){
+ 206              		.loc 1 93 0
+ 207 0016 4AE0     		b	.L9
+ 208              	.L16:
+  94:src/shell.c   **** 		if(*cmd == ' '){
+ 209              		.loc 1 94 0
+ 210 0018 3B68     		ldr	r3, [r7, #0]
+ 211 001a 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 212 001c 202B     		cmp	r3, #32
+ 213 001e 04D1     		bne	.L10
+  95:src/shell.c   **** 			cmd++;
+ 214              		.loc 1 95 0
+ 215 0020 3B68     		ldr	r3, [r7, #0]
+ 216 0022 03F10103 		add	r3, r3, #1
+ 217 0026 3B60     		str	r3, [r7, #0]
+ 218 0028 41E0     		b	.L9
+ 219              	.L10:
+ 220              	.LBB2:
+  96:src/shell.c   **** 		}
+  97:src/shell.c   **** 		else {
+  98:src/shell.c   **** 			while (1) {
+  99:src/shell.c   **** 				/* solve "" & '' in echo command*/
+ 100:src/shell.c   **** 				if ((*cmd == '\'') || (*cmd == '\"')){
+ 221              		.loc 1 100 0
+ 222 002a 3B68     		ldr	r3, [r7, #0]
+ 223 002c 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 224 002e 272B     		cmp	r3, #39
+ 225 0030 03D0     		beq	.L11
+ 226              		.loc 1 100 0 is_stmt 0 discriminator 1
+ 227 0032 3B68     		ldr	r3, [r7, #0]
+ 228 0034 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 229 0036 222B     		cmp	r3, #34
+ 230 0038 04D1     		bne	.L12
+ 231              	.L11:
+ 101:src/shell.c   **** 					cmd++;
+ 232              		.loc 1 101 0 is_stmt 1
+ 233 003a 3B68     		ldr	r3, [r7, #0]
+ 234 003c 03F10103 		add	r3, r3, #1
+ 235 0040 3B60     		str	r3, [r7, #0]
+ 236 0042 33E0     		b	.L13
+ 237              	.L12:
+ 102:src/shell.c   **** 				}
+ 103:src/shell.c   **** 				else if ((*cmd != ' ') && (*cmd != '\0')){
+ 238              		.loc 1 103 0
+ 239 0044 3B68     		ldr	r3, [r7, #0]
+ 240 0046 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 241 0048 202B     		cmp	r3, #32
+ 242 004a 13D0     		beq	.L14
+ 243              		.loc 1 103 0 is_stmt 0 discriminator 1
+ 244 004c 3B68     		ldr	r3, [r7, #0]
+ 245 004e 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 246 0050 002B     		cmp	r3, #0
+ 247 0052 0FD0     		beq	.L14
+ 104:src/shell.c   **** 					tmp[i++] = *cmd;
+ 248              		.loc 1 104 0 is_stmt 1
+ 249 0054 3B68     		ldr	r3, [r7, #0]
+ 250 0056 1A78     		ldrb	r2, [r3, #0]	@ zero_extendqisi2
+ 251 0058 7B6A     		ldr	r3, [r7, #36]
+ 252 005a 07F10C01 		add	r1, r7, #12
+ 253 005e CB18     		adds	r3, r1, r3
+ 254 0060 1A70     		strb	r2, [r3, #0]
+ 255 0062 7B6A     		ldr	r3, [r7, #36]
+ 256 0064 03F10103 		add	r3, r3, #1
+ 257 0068 7B62     		str	r3, [r7, #36]
+ 105:src/shell.c   **** 					cmd++;
+ 258              		.loc 1 105 0
+ 259 006a 3B68     		ldr	r3, [r7, #0]
+ 260 006c 03F10103 		add	r3, r3, #1
+ 261 0070 3B60     		str	r3, [r7, #0]
+ 262 0072 1BE0     		b	.L13
+ 263              	.L14:
+ 106:src/shell.c   **** 				}
+ 107:src/shell.c   **** 				else { 
+ 108:src/shell.c   **** 					tmp[i] = '\0';
+ 264              		.loc 1 108 0
+ 265 0074 7B6A     		ldr	r3, [r7, #36]
+ 266 0076 07F10C02 		add	r2, r7, #12
+ 267 007a D318     		adds	r3, r2, r3
+ 268 007c 4FF00002 		mov	r2, #0
+ 269 0080 1A70     		strb	r2, [r3, #0]
+ 109:src/shell.c   **** 					i = 0;
+ 270              		.loc 1 109 0
+ 271 0082 4FF00003 		mov	r3, #0
+ 272 0086 7B62     		str	r3, [r7, #36]
+ 110:src/shell.c   **** 					break;
+ 273              		.loc 1 110 0
+ 274 0088 00BF     		nop
+ 111:src/shell.c   **** 				}		
+ 112:src/shell.c   **** 			}
+ 113:src/shell.c   **** 			strcpy(argv[j++],tmp);
+ 275              		.loc 1 113 0
+ 276 008a 3B6A     		ldr	r3, [r7, #32]
+ 277 008c 4FEA8303 		lsl	r3, r3, #2
+ 278 0090 7A68     		ldr	r2, [r7, #4]
+ 279 0092 D318     		adds	r3, r2, r3
+ 280 0094 1B68     		ldr	r3, [r3, #0]
+ 281 0096 3A6A     		ldr	r2, [r7, #32]
+ 282 0098 02F10102 		add	r2, r2, #1
+ 283 009c 3A62     		str	r2, [r7, #32]
+ 284 009e 1846     		mov	r0, r3
+ 285 00a0 07F10C03 		add	r3, r7, #12
+ 286 00a4 1946     		mov	r1, r3
+ 287 00a6 FFF7FEFF 		bl	strcpy
+ 288 00aa 00E0     		b	.L9
+ 289              	.L13:
+ 112:src/shell.c   **** 			}
+ 290              		.loc 1 112 0
+ 291 00ac BDE7     		b	.L10
+ 292              	.L9:
+ 293              	.LBE2:
+  93:src/shell.c   **** 	while (*cmd != '\0'){
+ 294              		.loc 1 93 0 discriminator 1
+ 295 00ae 3B68     		ldr	r3, [r7, #0]
+ 296 00b0 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 297 00b2 002B     		cmp	r3, #0
+ 298 00b4 B0D1     		bne	.L16
+ 114:src/shell.c   **** 		}
+ 115:src/shell.c   **** 	}
+ 116:src/shell.c   **** 	return j;	
+ 299              		.loc 1 116 0
+ 300 00b6 3B6A     		ldr	r3, [r7, #32]
+ 117:src/shell.c   **** }
+ 301              		.loc 1 117 0
+ 302 00b8 1846     		mov	r0, r3
+ 303 00ba 07F12807 		add	r7, r7, #40
+ 304 00be BD46     		mov	sp, r7
+ 305 00c0 80BD     		pop	{r7, pc}
+ 306              		.cfi_endproc
+ 307              	.LFE113:
+ 309 00c2 00BF     		.section	.rodata
+ 310              		.align	2
+ 311              	.LC0:
+ 312 0000 636F6D6D 		.ascii	"command is = %s, argv is = %s\012\000"
+ 312      616E6420 
+ 312      6973203D 
+ 312      2025732C 
+ 312      20617267 
+ 313 001f 00       		.align	2
+ 314              	.LC1:
+ 315 0020 6E6F2063 		.ascii	"no command\012\000"
+ 315      6F6D6D61 
+ 315      6E640A00 
+ 316              		.section	.text.check_keyword,"ax",%progbits
+ 317              		.align	2
+ 318              		.global	check_keyword
+ 319              		.thumb
+ 320              		.thumb_func
+ 322              	check_keyword:
+ 323              	.LFB114:
+ 118:src/shell.c   **** 
+ 119:src/shell.c   **** void check_keyword()
+ 120:src/shell.c   **** {
+ 324              		.loc 1 120 0
+ 325              		.cfi_startproc
+ 326              		@ args = 0, pretend = 0, frame = 192
+ 327              		@ frame_needed = 1, uses_anonymous_args = 0
+ 328 0000 80B5     		push	{r7, lr}
+ 329              	.LCFI9:
+ 330              		.cfi_def_cfa_offset 8
+ 331              		.cfi_offset 14, -4
+ 332              		.cfi_offset 7, -8
+ 333 0002 B0B0     		sub	sp, sp, #192
+ 334              	.LCFI10:
+ 335              		.cfi_def_cfa_offset 200
+ 336 0004 00AF     		add	r7, sp, #0
+ 337              	.LCFI11:
+ 338              		.cfi_def_cfa_register 7
+ 121:src/shell.c   **** 	/*use hardcoded array*/	
+ 122:src/shell.c   **** 	char tok[MAX_ARGC + 1][MAX_CMDHELP];
+ 123:src/shell.c   **** 
+ 124:src/shell.c   **** 	char *argv[MAX_ARGC + 1];
+ 125:src/shell.c   **** 	int k = 0;
+ 339              		.loc 1 125 0
+ 340 0006 4FF00003 		mov	r3, #0
+ 341 000a C7F8BC30 		str	r3, [r7, #188]
+ 126:src/shell.c   **** 
+ 127:src/shell.c   **** 	for (k;k<MAX_ARGC + 1;k++){
+ 342              		.loc 1 127 0
+ 343 000e 19E0     		b	.L18
+ 344              	.L19:
+ 128:src/shell.c   **** 	argv[k] = &tok[k][0];
+ 345              		.loc 1 128 0 discriminator 2
+ 346 0010 D7F8BC20 		ldr	r2, [r7, #188]
+ 347 0014 1346     		mov	r3, r2
+ 348 0016 4FEA8303 		lsl	r3, r3, #2
+ 349 001a 9B18     		adds	r3, r3, r2
+ 350 001c 4FEA4303 		lsl	r3, r3, #1
+ 351 0020 07F14402 		add	r2, r7, #68
+ 352 0024 D218     		adds	r2, r2, r3
+ 353 0026 D7F8BC30 		ldr	r3, [r7, #188]
+ 354 002a 4FEA8303 		lsl	r3, r3, #2
+ 355 002e 07F1C001 		add	r1, r7, #192
+ 356 0032 CB18     		adds	r3, r1, r3
+ 357 0034 43F8A82C 		str	r2, [r3, #-168]
+ 127:src/shell.c   **** 	for (k;k<MAX_ARGC + 1;k++){
+ 358              		.loc 1 127 0 discriminator 2
+ 359 0038 D7F8BC30 		ldr	r3, [r7, #188]
+ 360 003c 03F10103 		add	r3, r3, #1
+ 361 0040 C7F8BC30 		str	r3, [r7, #188]
+ 362              	.L18:
+ 127:src/shell.c   **** 	for (k;k<MAX_ARGC + 1;k++){
+ 363              		.loc 1 127 0 is_stmt 0 discriminator 1
+ 364 0044 D7F8BC30 		ldr	r3, [r7, #188]
+ 365 0048 0A2B     		cmp	r3, #10
+ 366 004a E1DD     		ble	.L19
+ 129:src/shell.c   **** 	}
+ 130:src/shell.c   **** 
+ 131:src/shell.c   **** 	int i;
+ 132:src/shell.c   **** 	int argc;
+ 133:src/shell.c   **** 
+ 134:src/shell.c   **** 	char cmdstr[CMDBUF_SIZE];
+ 135:src/shell.c   **** 	strcpy(cmdstr, &cmd[cur_his][0]);
+ 367              		.loc 1 135 0 is_stmt 1
+ 368 004c 40F20003 		movw	r3, #:lower16:cur_his
+ 369 0050 C0F20003 		movt	r3, #:upper16:cur_his
+ 370 0054 1B68     		ldr	r3, [r3, #0]
+ 371 0056 1A46     		mov	r2, r3
+ 372 0058 1346     		mov	r3, r2
+ 373 005a 4FEA8303 		lsl	r3, r3, #2
+ 374 005e 9B18     		adds	r3, r3, r2
+ 375 0060 4FEA8303 		lsl	r3, r3, #2
+ 376 0064 1A46     		mov	r2, r3
+ 377 0066 40F20003 		movw	r3, #:lower16:cmd
+ 378 006a C0F20003 		movt	r3, #:upper16:cmd
+ 379 006e D318     		adds	r3, r2, r3
+ 380 0070 07F10402 		add	r2, r7, #4
+ 381 0074 1046     		mov	r0, r2
+ 382 0076 1946     		mov	r1, r3
+ 383 0078 FFF7FEFF 		bl	strcpy
+ 136:src/shell.c   **** 	
+ 137:src/shell.c   **** 	argc = cmdtok(argv, cmdstr);
+ 384              		.loc 1 137 0
+ 385 007c 07F11803 		add	r3, r7, #24
+ 386 0080 1846     		mov	r0, r3
+ 387 0082 07F10403 		add	r3, r7, #4
+ 388 0086 1946     		mov	r1, r3
+ 389 0088 FFF7FEFF 		bl	cmdtok
+ 390 008c C7F8B400 		str	r0, [r7, #180]
+ 138:src/shell.c   **** 
+ 139:src/shell.c   **** 	qprintf(xQueueUARTSend, "command is = %s, argv is = %s\n", argv[0], argv[1]);
+ 391              		.loc 1 139 0
+ 392 0090 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 393 0094 C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 394 0098 1968     		ldr	r1, [r3, #0]
+ 395 009a BA69     		ldr	r2, [r7, #24]
+ 396 009c FB69     		ldr	r3, [r7, #28]
+ 397 009e 0846     		mov	r0, r1
+ 398 00a0 40F20001 		movw	r1, #:lower16:.LC0
+ 399 00a4 C0F20001 		movt	r1, #:upper16:.LC0
+ 400 00a8 FFF7FEFF 		bl	qprintf
+ 140:src/shell.c   **** 
+ 141:src/shell.c   **** 
+ 142:src/shell.c   **** 	for (i = 0; i < CMD_COUNT; i++) {
+ 401              		.loc 1 142 0
+ 402 00ac 4FF00003 		mov	r3, #0
+ 403 00b0 C7F8B830 		str	r3, [r7, #184]
+ 404 00b4 31E0     		b	.L20
+ 405              	.L23:
+ 143:src/shell.c   **** 		if (!strcmp(cmd_data[i].cmd, argv[0])) {
+ 406              		.loc 1 143 0
+ 407 00b6 D7F8B820 		ldr	r2, [r7, #184]
+ 408 00ba 1346     		mov	r3, r2
+ 409 00bc 4FEAC303 		lsl	r3, r3, #3
+ 410 00c0 9B1A     		subs	r3, r3, r2
+ 411 00c2 4FEA8303 		lsl	r3, r3, #2
+ 412 00c6 40F20002 		movw	r2, #:lower16:cmd_data
+ 413 00ca C0F20002 		movt	r2, #:upper16:cmd_data
+ 414 00ce 9A18     		adds	r2, r3, r2
+ 415 00d0 BB69     		ldr	r3, [r7, #24]
+ 416 00d2 1046     		mov	r0, r2
+ 417 00d4 1946     		mov	r1, r3
+ 418 00d6 FFF7FEFF 		bl	strcmp
+ 419 00da 0346     		mov	r3, r0
+ 420 00dc 002B     		cmp	r3, #0
+ 421 00de 16D1     		bne	.L21
+ 144:src/shell.c   **** 			cmd_data[i].func(argc, argv);
+ 422              		.loc 1 144 0
+ 423 00e0 40F20002 		movw	r2, #:lower16:cmd_data
+ 424 00e4 C0F20002 		movt	r2, #:upper16:cmd_data
+ 425 00e8 D7F8B810 		ldr	r1, [r7, #184]
+ 426 00ec 0B46     		mov	r3, r1
+ 427 00ee 4FEAC303 		lsl	r3, r3, #3
+ 428 00f2 5B1A     		subs	r3, r3, r1
+ 429 00f4 4FEA8303 		lsl	r3, r3, #2
+ 430 00f8 D318     		adds	r3, r2, r3
+ 431 00fa 03F10C03 		add	r3, r3, #12
+ 432 00fe 1B68     		ldr	r3, [r3, #0]
+ 433 0100 D7F8B400 		ldr	r0, [r7, #180]
+ 434 0104 07F11802 		add	r2, r7, #24
+ 435 0108 1146     		mov	r1, r2
+ 436 010a 9847     		blx	r3
+ 145:src/shell.c   **** 			break;
+ 437              		.loc 1 145 0
+ 438 010c 09E0     		b	.L22
+ 439              	.L21:
+ 142:src/shell.c   **** 	for (i = 0; i < CMD_COUNT; i++) {
+ 440              		.loc 1 142 0
+ 441 010e D7F8B830 		ldr	r3, [r7, #184]
+ 442 0112 03F10103 		add	r3, r3, #1
+ 443 0116 C7F8B830 		str	r3, [r7, #184]
+ 444              	.L20:
+ 142:src/shell.c   **** 	for (i = 0; i < CMD_COUNT; i++) {
+ 445              		.loc 1 142 0 is_stmt 0 discriminator 1
+ 446 011a D7F8B830 		ldr	r3, [r7, #184]
+ 447 011e 032B     		cmp	r3, #3
+ 448 0120 C9DD     		ble	.L23
+ 449              	.L22:
+ 146:src/shell.c   **** 		}
+ 147:src/shell.c   **** 	}
+ 148:src/shell.c   **** 
+ 149:src/shell.c   **** 	if (i == CMD_COUNT) {
+ 450              		.loc 1 149 0 is_stmt 1
+ 451 0122 D7F8B830 		ldr	r3, [r7, #184]
+ 452 0126 042B     		cmp	r3, #4
+ 453 0128 0BD1     		bne	.L17
+ 150:src/shell.c   **** 
+ 151:src/shell.c   **** 		qprintf(xQueueUARTSend, "no command\n");
+ 454              		.loc 1 151 0
+ 455 012a 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 456 012e C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 457 0132 1B68     		ldr	r3, [r3, #0]
+ 458 0134 1846     		mov	r0, r3
+ 459 0136 40F20001 		movw	r1, #:lower16:.LC1
+ 460 013a C0F20001 		movt	r1, #:upper16:.LC1
+ 461 013e FFF7FEFF 		bl	qprintf
+ 462              	.L17:
+ 152:src/shell.c   ****  		
+ 153:src/shell.c   **** 	}
+ 154:src/shell.c   **** }
+ 463              		.loc 1 154 0
+ 464 0142 07F1C007 		add	r7, r7, #192
+ 465 0146 BD46     		mov	sp, r7
+ 466 0148 80BD     		pop	{r7, pc}
+ 467              		.cfi_endproc
+ 468              	.LFE114:
+ 470 014a 00BF     		.section	.rodata
+ 471              		.align	2
+ 472              	.LC2:
+ 473 002c 0D536865 		.ascii	"\015Shell:~$\000"
+ 473      6C6C3A7E 
+ 473      2400
+ 474 0036 0000     		.align	2
+ 475              	.LC3:
+ 476 0038 257300   		.ascii	"%s\000"
+ 477 003b 00       		.align	2
+ 478              	.LC4:
+ 479 003c 08200800 		.ascii	"\010 \010\000"
+ 480              		.align	2
+ 481              	.LC5:
+ 482 0040 256300   		.ascii	"%c\000"
+ 483 0043 00       		.section	.text.shell,"ax",%progbits
+ 484              		.align	2
+ 485              		.global	shell
+ 486              		.thumb
+ 487              		.thumb_func
+ 489              	shell:
+ 490              	.LFB115:
+ 155:src/shell.c   **** 
+ 156:src/shell.c   **** void shell(void *pvParameters)
+ 157:src/shell.c   **** {
+ 491              		.loc 1 157 0
+ 492              		.cfi_startproc
+ 493              		@ args = 0, pretend = 0, frame = 24
+ 494              		@ frame_needed = 1, uses_anonymous_args = 0
+ 495 0000 80B5     		push	{r7, lr}
+ 496              	.LCFI12:
+ 497              		.cfi_def_cfa_offset 8
+ 498              		.cfi_offset 14, -4
+ 499              		.cfi_offset 7, -8
+ 500 0002 86B0     		sub	sp, sp, #24
+ 501              	.LCFI13:
+ 502              		.cfi_def_cfa_offset 32
+ 503 0004 00AF     		add	r7, sp, #0
+ 504              	.LCFI14:
+ 505              		.cfi_def_cfa_register 7
+ 506 0006 7860     		str	r0, [r7, #4]
+ 158:src/shell.c   **** 	char put_ch;
+ 159:src/shell.c   **** 	char *p = NULL;
+ 507              		.loc 1 159 0
+ 508 0008 4FF00003 		mov	r3, #0
+ 509 000c 7B61     		str	r3, [r7, #20]
+ 160:src/shell.c   **** 	char *str ="\rShell:~$";	
+ 510              		.loc 1 160 0
+ 511 000e 40F20003 		movw	r3, #:lower16:.LC2
+ 512 0012 C0F20003 		movt	r3, #:upper16:.LC2
+ 513 0016 3B61     		str	r3, [r7, #16]
+ 514              	.L34:
+ 515              	.LBB3:
+ 161:src/shell.c   **** 
+ 162:src/shell.c   **** 	for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
+ 163:src/shell.c   **** 		/* need use & that p can work correct, idk why p = cmd[cur_his] can't work */
+ 164:src/shell.c   **** 		p = &cmd[cur_his][0];
+ 516              		.loc 1 164 0
+ 517 0018 40F20003 		movw	r3, #:lower16:cur_his
+ 518 001c C0F20003 		movt	r3, #:upper16:cur_his
+ 519 0020 1B68     		ldr	r3, [r3, #0]
+ 520 0022 1A46     		mov	r2, r3
+ 521 0024 1346     		mov	r3, r2
+ 522 0026 4FEA8303 		lsl	r3, r3, #2
+ 523 002a 9B18     		adds	r3, r3, r2
+ 524 002c 4FEA8303 		lsl	r3, r3, #2
+ 525 0030 1A46     		mov	r2, r3
+ 526 0032 40F20003 		movw	r3, #:lower16:cmd
+ 527 0036 C0F20003 		movt	r3, #:upper16:cmd
+ 528 003a D318     		adds	r3, r2, r3
+ 529 003c 7B61     		str	r3, [r7, #20]
+ 165:src/shell.c   **** 
+ 166:src/shell.c   **** 		qprintf(xQueueUARTSend, "%s", str);
+ 530              		.loc 1 166 0
+ 531 003e 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 532 0042 C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 533 0046 1B68     		ldr	r3, [r3, #0]
+ 534 0048 1846     		mov	r0, r3
+ 535 004a 40F20001 		movw	r1, #:lower16:.LC3
+ 536 004e C0F20001 		movt	r1, #:upper16:.LC3
+ 537 0052 3A69     		ldr	r2, [r7, #16]
+ 538 0054 FFF7FEFF 		bl	qprintf
+ 539 0058 00E0     		b	.L33
+ 540              	.L35:
+ 167:src/shell.c   **** 
+ 168:src/shell.c   **** 		while (1) {
+ 169:src/shell.c   **** 			put_ch = receive_byte();			
+ 170:src/shell.c   **** 
+ 171:src/shell.c   **** 			if (put_ch == '\r' || put_ch == '\n') {
+ 172:src/shell.c   **** 				*p = '\0';
+ 173:src/shell.c   **** 				qprintf(xQueueUARTSend, "%s",next_line);
+ 174:src/shell.c   **** 				break;
+ 175:src/shell.c   **** 			}
+ 176:src/shell.c   **** 			else if (put_ch== 127 || put_ch == '\b') {
+ 177:src/shell.c   **** 				if (p > &cmd[cur_his][0]) {
+ 178:src/shell.c   **** 					p--;
+ 179:src/shell.c   **** 					qprintf(xQueueUARTSend, "\b \b");
+ 180:src/shell.c   **** 				}
+ 181:src/shell.c   **** 			}
+ 182:src/shell.c   **** 			else if (p - &cmd[cur_his][0] < CMDBUF_SIZE - 1) {
+ 183:src/shell.c   **** 				*(p++) = put_ch;
+ 184:src/shell.c   **** 				qprintf(xQueueUARTSend, "%c",put_ch);
+ 185:src/shell.c   **** 			}
+ 186:src/shell.c   **** 
+ 187:src/shell.c   **** 		}
+ 541              		.loc 1 187 0
+ 542 005a 00BF     		nop
+ 543              	.L33:
+ 544              	.LBB4:
+ 169:src/shell.c   **** 			put_ch = receive_byte();			
+ 545              		.loc 1 169 0
+ 546 005c FFF7FEFF 		bl	receive_byte
+ 547 0060 0346     		mov	r3, r0
+ 548 0062 FB73     		strb	r3, [r7, #15]
+ 171:src/shell.c   **** 			if (put_ch == '\r' || put_ch == '\n') {
+ 549              		.loc 1 171 0
+ 550 0064 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 551 0066 0D2B     		cmp	r3, #13
+ 552 0068 02D0     		beq	.L26
+ 171:src/shell.c   **** 			if (put_ch == '\r' || put_ch == '\n') {
+ 553              		.loc 1 171 0 is_stmt 0 discriminator 1
+ 554 006a FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 555 006c 0A2B     		cmp	r3, #10
+ 556 006e 1ED1     		bne	.L27
+ 557              	.L26:
+ 172:src/shell.c   **** 				*p = '\0';
+ 558              		.loc 1 172 0 is_stmt 1
+ 559 0070 7B69     		ldr	r3, [r7, #20]
+ 560 0072 4FF00002 		mov	r2, #0
+ 561 0076 1A70     		strb	r2, [r3, #0]
+ 173:src/shell.c   **** 				qprintf(xQueueUARTSend, "%s",next_line);
+ 562              		.loc 1 173 0
+ 563 0078 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 564 007c C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 565 0080 1B68     		ldr	r3, [r3, #0]
+ 566 0082 1846     		mov	r0, r3
+ 567 0084 40F20001 		movw	r1, #:lower16:.LC3
+ 568 0088 C0F20001 		movt	r1, #:upper16:.LC3
+ 569 008c 40F20002 		movw	r2, #:lower16:next_line
+ 570 0090 C0F20002 		movt	r2, #:upper16:next_line
+ 571 0094 FFF7FEFF 		bl	qprintf
+ 174:src/shell.c   **** 				break;
+ 572              		.loc 1 174 0
+ 573 0098 00BF     		nop
+ 574              	.LBE4:
+ 188:src/shell.c   **** 		check_keyword();			
+ 575              		.loc 1 188 0
+ 576 009a FFF7FEFF 		bl	check_keyword
+ 577              	.LBE3:
+ 162:src/shell.c   **** 	for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
+ 578              		.loc 1 162 0
+ 579 009e 40F20003 		movw	r3, #:lower16:cur_his
+ 580 00a2 C0F20003 		movt	r3, #:upper16:cur_his
+ 581 00a6 4FF00002 		mov	r2, #0
+ 582 00aa 1A60     		str	r2, [r3, #0]
+ 189:src/shell.c   **** 	}
+ 583              		.loc 1 189 0
+ 584 00ac B4E7     		b	.L34
+ 585              	.L27:
+ 586              	.LBB6:
+ 587              	.LBB5:
+ 176:src/shell.c   **** 			else if (put_ch== 127 || put_ch == '\b') {
+ 588              		.loc 1 176 0
+ 589 00ae FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 590 00b0 7F2B     		cmp	r3, #127
+ 591 00b2 02D0     		beq	.L29
+ 176:src/shell.c   **** 			else if (put_ch== 127 || put_ch == '\b') {
+ 592              		.loc 1 176 0 is_stmt 0 discriminator 1
+ 593 00b4 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 594 00b6 082B     		cmp	r3, #8
+ 595 00b8 25D1     		bne	.L30
+ 596              	.L29:
+ 177:src/shell.c   **** 				if (p > &cmd[cur_his][0]) {
+ 597              		.loc 1 177 0 is_stmt 1
+ 598 00ba 40F20003 		movw	r3, #:lower16:cur_his
+ 599 00be C0F20003 		movt	r3, #:upper16:cur_his
+ 600 00c2 1B68     		ldr	r3, [r3, #0]
+ 601 00c4 1A46     		mov	r2, r3
+ 602 00c6 1346     		mov	r3, r2
+ 603 00c8 4FEA8303 		lsl	r3, r3, #2
+ 604 00cc 9B18     		adds	r3, r3, r2
+ 605 00ce 4FEA8303 		lsl	r3, r3, #2
+ 606 00d2 1A46     		mov	r2, r3
+ 607 00d4 40F20003 		movw	r3, #:lower16:cmd
+ 608 00d8 C0F20003 		movt	r3, #:upper16:cmd
+ 609 00dc D218     		adds	r2, r2, r3
+ 610 00de 7B69     		ldr	r3, [r7, #20]
+ 611 00e0 9A42     		cmp	r2, r3
+ 612 00e2 3CD2     		bcs	.L32
+ 178:src/shell.c   **** 					p--;
+ 613              		.loc 1 178 0
+ 614 00e4 7B69     		ldr	r3, [r7, #20]
+ 615 00e6 03F1FF33 		add	r3, r3, #-1
+ 616 00ea 7B61     		str	r3, [r7, #20]
+ 179:src/shell.c   **** 					qprintf(xQueueUARTSend, "\b \b");
+ 617              		.loc 1 179 0
+ 618 00ec 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 619 00f0 C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 620 00f4 1B68     		ldr	r3, [r3, #0]
+ 621 00f6 1846     		mov	r0, r3
+ 622 00f8 40F20001 		movw	r1, #:lower16:.LC4
+ 623 00fc C0F20001 		movt	r1, #:upper16:.LC4
+ 624 0100 FFF7FEFF 		bl	qprintf
+ 177:src/shell.c   **** 				if (p > &cmd[cur_his][0]) {
+ 625              		.loc 1 177 0
+ 626 0104 2BE0     		b	.L32
+ 627              	.L30:
+ 182:src/shell.c   **** 			else if (p - &cmd[cur_his][0] < CMDBUF_SIZE - 1) {
+ 628              		.loc 1 182 0
+ 629 0106 7969     		ldr	r1, [r7, #20]
+ 630 0108 40F20003 		movw	r3, #:lower16:cur_his
+ 631 010c C0F20003 		movt	r3, #:upper16:cur_his
+ 632 0110 1B68     		ldr	r3, [r3, #0]
+ 633 0112 1A46     		mov	r2, r3
+ 634 0114 1346     		mov	r3, r2
+ 635 0116 4FEA8303 		lsl	r3, r3, #2
+ 636 011a 9B18     		adds	r3, r3, r2
+ 637 011c 4FEA8303 		lsl	r3, r3, #2
+ 638 0120 1A46     		mov	r2, r3
+ 639 0122 40F20003 		movw	r3, #:lower16:cmd
+ 640 0126 C0F20003 		movt	r3, #:upper16:cmd
+ 641 012a D318     		adds	r3, r2, r3
+ 642 012c CB1A     		subs	r3, r1, r3
+ 643 012e 122B     		cmp	r3, #18
+ 644 0130 93DC     		bgt	.L35
+ 183:src/shell.c   **** 				*(p++) = put_ch;
+ 645              		.loc 1 183 0
+ 646 0132 7B69     		ldr	r3, [r7, #20]
+ 647 0134 FA7B     		ldrb	r2, [r7, #15]
+ 648 0136 1A70     		strb	r2, [r3, #0]
+ 649 0138 7B69     		ldr	r3, [r7, #20]
+ 650 013a 03F10103 		add	r3, r3, #1
+ 651 013e 7B61     		str	r3, [r7, #20]
+ 184:src/shell.c   **** 				qprintf(xQueueUARTSend, "%c",put_ch);
+ 652              		.loc 1 184 0
+ 653 0140 40F20003 		movw	r3, #:lower16:xQueueUARTSend
+ 654 0144 C0F20003 		movt	r3, #:upper16:xQueueUARTSend
+ 655 0148 1A68     		ldr	r2, [r3, #0]
+ 656 014a FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 657 014c 1046     		mov	r0, r2
+ 658 014e 40F20001 		movw	r1, #:lower16:.LC5
+ 659 0152 C0F20001 		movt	r1, #:upper16:.LC5
+ 660 0156 1A46     		mov	r2, r3
+ 661 0158 FFF7FEFF 		bl	qprintf
+ 662              	.LBE5:
+ 187:src/shell.c   **** 		}
+ 663              		.loc 1 187 0
+ 664 015c 7DE7     		b	.L35
+ 665              	.L32:
+ 666 015e 7CE7     		b	.L35
+ 667              	.LBE6:
+ 668              		.cfi_endproc
+ 669              	.LFE115:
+ 671              		.text
+ 672              	.Letext0:
+ 673              		.file 2 "/usr/local/csl/arm-2012.03/bin/../lib/gcc/arm-none-eabi/4.6.3/../../../../arm-none-eabi/i
+ 674              		.file 3 "FreeRTOS/Source/include/queue.h"
+ 675              		.file 4 "<built-in>"
+ 676              		.file 5 "libs/CMSIS/Include/core_cm4.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 shell.c
+     /tmp/ccGBoB5u.s:20     .text.strcmp:00000000 $t
+     /tmp/ccGBoB5u.s:25     .text.strcmp:00000000 strcmp
+     /tmp/ccGBoB5u.s:35     .text.strcmp:00000000 strcmp_lop
+     /tmp/ccGBoB5u.s:57     .data.next_line:00000000 next_line
+     /tmp/ccGBoB5u.s:54     .data.next_line:00000000 $d
+                            *COM*:00000014 cmd
+     /tmp/ccGBoB5u.s:67     .bss.cur_his:00000000 cur_his
+     /tmp/ccGBoB5u.s:64     .bss.cur_his:00000000 $d
+                            *COM*:00000001 CMD_TYPE
+     /tmp/ccGBoB5u.s:75     .rodata.cmd_data:00000000 cmd_data
+     /tmp/ccGBoB5u.s:72     .rodata.cmd_data:00000000 $d
+     /tmp/ccGBoB5u.s:90     .text.pwm:00000000 pwm
+     /tmp/ccGBoB5u.s:85     .text.pwm:00000000 $t
+     /tmp/ccGBoB5u.s:118    .text.Delay_5ms:00000000 $t
+     /tmp/ccGBoB5u.s:123    .text.Delay_5ms:00000000 Delay_5ms
+     /tmp/ccGBoB5u.s:176    .text.cmdtok:00000000 $t
+     /tmp/ccGBoB5u.s:181    .text.cmdtok:00000000 cmdtok
+     /tmp/ccGBoB5u.s:310    .rodata:00000000 $d
+     /tmp/ccGBoB5u.s:311    .rodata:00000000 .LC0
+     /tmp/ccGBoB5u.s:314    .rodata:00000020 .LC1
+     /tmp/ccGBoB5u.s:317    .text.check_keyword:00000000 $t
+     /tmp/ccGBoB5u.s:322    .text.check_keyword:00000000 check_keyword
+     /tmp/ccGBoB5u.s:472    .rodata:0000002c .LC2
+     /tmp/ccGBoB5u.s:475    .rodata:00000038 .LC3
+     /tmp/ccGBoB5u.s:478    .rodata:0000003c .LC4
+     /tmp/ccGBoB5u.s:481    .rodata:00000040 .LC5
+     /tmp/ccGBoB5u.s:484    .text.shell:00000000 $t
+     /tmp/ccGBoB5u.s:489    .text.shell:00000000 shell
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+strcpy
+xQueueUARTSend
+qprintf
+receive_byte
