@@ -35,7 +35,7 @@ xTimerHandle xTimerFindMax;
 
 
 uint16_t tick1sec = 0;
-uint8_t tick10Hz = 0;
+uint8_t tick100Hz = 0;
 
 /* Queue structure used for passing messages. */
 typedef struct {
@@ -85,8 +85,8 @@ void vUsartSendTask(void *pvParameters)
 }
 
 enum{  
-	FIND_MAX = 0,
-	FIND_SLOPE,
+	FIND_MAX = 0,  //find the maximun value of the heartbeat wave
+	FIND_SLOPE,    //find the slop of wave is positive or negtive
 	INCR,
 	DECR
 
@@ -100,8 +100,6 @@ void vHeartBeatTask(void *pvParameters)
 
 	uint16_t Max_int[2];
 	double Max_float;
-
-	
 
 	qprintf(xQueueUARTSend, "Start Sampling...\n");
 	while(1){
@@ -131,17 +129,19 @@ void vHeartBeatTask(void *pvParameters)
 				break;
 			case INCR:
 				curr_ADC = ADCConvertedValue[0];
-				//qprintf(xQueueUARTSend, "\rHeart Beat: %d                   I", HeartBeat);
 				if( (curr_ADC < last_ADC) && (last_ADC >= Maximum - 50)){
 					if(xTimerIsTimerActive(xTimer10ms) == pdTRUE){
+						//Meet 2nd peak.
+						//calculate heartbrat
 						xTimerStop(xTimer10ms, 0);
-						HeartBeat = (tick10Hz != 0)?(int)(60 * 100 / tick10Hz):0;
+						HeartBeat = (tick100Hz != 0)?(int)(60 * 100 / tick100Hz):0; 
 						qprintf(xQueueUARTSend, "\r                     \r");
 						qprintf(xQueueUARTSend, "Heart Beat: %d", HeartBeat);
-						//qprintf(xQueueUARTSend, "tick10Hz: %d", tick10Hz);
-						tick10Hz = 0;
+						tick100Hz = 0;
 						state = FIND_MAX;
 					}else{
+						//Meet first peak.
+						//start timer to count the peak to peak freq.
 						xTimerStart(xTimer10ms, 0);
 						state = DECR;
 					}
@@ -150,11 +150,12 @@ void vHeartBeatTask(void *pvParameters)
 				break;
 			case DECR:
 				curr_ADC = ADCConvertedValue[0];
-				//qprintf(xQueueUARTSend, "\rHeart Beat: %d                   D", HeartBeat);
+				
 				if(curr_ADC > last_ADC){
 					state = INCR;
 				}
 				last_ADC = curr_ADC;
+				break;
 		}
 		vTaskDelay(50 / portTICK_RATE_MS);
 	}
@@ -171,57 +172,9 @@ void vTimerSystemIdle( xTimerHandle pxTimer )
 	qprintf(xQueueUARTSend, "10 sec...\n\r");
 }
 
-void vTimer10HzTick(xTimerHandle pxTimer)
+void vTimer100HzTick(xTimerHandle pxTimer)
 {
-	tick10Hz++;
-}
-
-#define BUFFERSIZE 8
-#define THRESHOLD 800
-uint8_t tick = 0, flag_t, flag;
-uint16_t deltaBuffer[BUFFERSIZE] = {0};
-uint16_t recentTotal = 0, newADC = 0, lastADC = 0, delta = 0, index = 0;
-uint16_t heartBeat = 0;
-
-void vTimerReadADCValue(xTimerHandle pxTimer)
-{
-	double AD_value;
-	uint16_t value[3];
-	
-	value[0] = ADCConvertedValue[0];
-	AD_value = (value[0] * 2.96f) / 4096.0f;
-	value[1] = (uint16_t) AD_value;
-	value[2] = (AD_value - value[1]) * 1000;
-	//qprintf(xQueueUARTSend, "\r                     \r");
-	//qprintf(xQueueUARTSend, "voltage:%d.%d", value[1], value[2]);
-	
-	newADC = value[2];
-	delta = newADC - lastADC;
-	lastADC = newADC;
-	
-	recentTotal = recentTotal - deltaBuffer[index] + delta;
-	if(recentTotal >= 65000) recentTotal = 0;
-
-	deltaBuffer[index] = delta;
-	index = (index + 1) % BUFFERSIZE;
-	//qprintf(xQueueUARTSend, "recentTotal: %d\n", recentTotal);
-	if(recentTotal >= THRESHOLD){
-		if(flag == 0){
-			flag_t = 1;
-			flag = 1;
-		}else {
-			heartBeat = (int)(60 * (10 / tick));
-			qprintf(xQueueUARTSend, "\r                     \r");
-			qprintf(xQueueUARTSend, "Heart Beat: %d", heartBeat);
-			flag = 0;
-			flag_t = 0;
-		}
-	}
-		//qprintf(xQueueUARTSend, "\r                     \r");
-		//	qprintf(xQueueUARTSend, "Tick: %d", tick);
-	if(flag_t == 1) tick++;
-	else tick = 0;
-	
+	tick100Hz++;
 }
 
 
@@ -244,7 +197,7 @@ int main(void)
 	//xTimerADC = xTimerCreate("ReadADC", 100 / portTICK_RATE_MS, pdTRUE, (void *) timerID[1], vTimerReadADCValue);
 	
 	xTimerFindMax = xTimerCreate("1sec tick", 1000/ portTICK_RATE_MS, pdTRUE,  (void *) timerID[1], vTimer1secTick);
-	xTimer10ms = xTimerCreate("100 Hz tick", 10 / portTICK_RATE_MS, pdTRUE, (void *) timerID[2], vTimer10HzTick);
+	xTimer10ms = xTimerCreate("100 Hz tick", 10 / portTICK_RATE_MS, pdTRUE, (void *) timerID[2], vTimer100HzTick);
 
 	/*a queue for tansfer the senddate to USART task*/
 	xQueueUARTSend = xQueueCreate(15, sizeof(serial_str_msg));
