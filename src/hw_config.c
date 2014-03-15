@@ -88,14 +88,16 @@ void RCC_Configuration(void)
 void GPIO_Configuration(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
-  
+
+  GPIO_StructInit(&GPIO_InitStructure);
   //ADC
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // PC0
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN; //analog mode
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  //GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
   GPIO_Init(GPIOC, &GPIO_InitStructure);
     /*----------------------------------------------------------------------*/
-
+  
+  GPIO_StructInit(&GPIO_InitStructure);
   //GPIO Configuration for USART - PA2, PA3
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
